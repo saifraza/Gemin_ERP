@@ -1,0 +1,18 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd ../.. && pnpm install --frozen-lockfile && pnpm build --filter @modern-erp/core-api && pnpm --filter @modern-erp/database generate"
+
+[deploy]
+startCommand = "cd services/core-api && pnpm --filter @modern-erp/database db:migrate:prod && node dist/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/health"
+
+[[services]]
+name = "core-api"
+internalPort = 3001
+
+[services.envs]
+NODE_ENV = "production"
+DATABASE_URL = "${{POSTGRESQL.DATABASE_URL}}"
+REDIS_URL = "${{REDIS.REDIS_URL}}"

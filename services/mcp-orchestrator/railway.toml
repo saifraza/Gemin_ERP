@@ -1,0 +1,20 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd ../.. && pnpm install --frozen-lockfile && pnpm build --filter @modern-erp/mcp-orchestrator"
+
+[deploy]
+startCommand = "cd services/mcp-orchestrator && node dist/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/health"
+
+[[services]]
+name = "mcp-orchestrator"
+internalPort = 3000
+
+[services.envs]
+NODE_ENV = "production"
+MCP_TRANSPORT = "http"
+DATABASE_URL = "${{POSTGRESQL.DATABASE_URL}}"
+REDIS_URL = "${{REDIS.REDIS_URL}}"
+KAFKA_BROKERS = "${{KAFKA.KAFKA_BROKERS}}"
