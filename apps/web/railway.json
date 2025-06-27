@@ -2,10 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install -g pnpm@8 && cd ../.. && pnpm install --no-frozen-lockfile && pnpm build --filter @modern-erp/web"
+    "buildCommand": "cd ../.. && npx pnpm@8 install --no-frozen-lockfile && npx pnpm@8 build --filter @modern-erp/web"
   },
   "deploy": {
-    "startCommand": "cd ../.. && pnpm start --filter @modern-erp/web",
+    "startCommand": "cd apps/web && npm run start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
