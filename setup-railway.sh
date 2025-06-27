@@ -1,0 +1,26 @@
+#!/bin/bash
+
+echo "🚀 Modern ERP Railway Setup"
+echo "=========================="
+echo ""
+echo "Follow these steps:"
+echo ""
+echo "1️⃣  Create Railway Project:"
+echo "    Open: https://railway.app/new"
+echo "    - Click 'Empty Project'"
+echo "    - Name it: 'modern-erp-2025'"
+echo ""
+echo "2️⃣  Link to this project:"
+echo "    railway link"
+echo "    (Select 'modern-erp-2025')"
+echo ""
+echo "3️⃣  Add Databases in Railway Dashboard:"
+echo "    - Click 'New' → 'Database' → 'PostgreSQL'"
+echo "    - Click 'New' → 'Database' → 'Redis'"
+echo ""
+echo "4️⃣  Deploy Services:"
+echo "    ./deploy-services.sh"
+echo ""
+echo "Press Enter to open Railway dashboard..."
+read
+railway open 2>/dev/null || open https://railway.app/new
