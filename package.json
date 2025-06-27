@@ -12,7 +12,11 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "start": "turbo run start --parallel",
+    "start": "echo 'Please specify a service to start'",
+    "start:core-api": "pnpm --filter @modern-erp/core-api start",
+    "start:mcp": "pnpm --filter @modern-erp/mcp-orchestrator start",
+    "start:gateway": "pnpm --filter @modern-erp/api-gateway start",
+    "start:web": "pnpm --filter @modern-erp/web start",
     "test": "turbo run test",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
