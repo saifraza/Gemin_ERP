@@ -1,0 +1,35 @@
+{
+  "name": "@modern-erp/mcp-orchestrator",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "@google/generative-ai": "^0.2.0",
+    "@anthropic-ai/sdk": "^0.20.0",
+    "openai": "^4.28.0",
+    "hono": "^4.0.0",
+    "@hono/node-server": "^1.8.0",
+    "zod": "^3.22.0",
+    "kafkajs": "^2.2.4",
+    "ioredis": "^5.3.2",
+    "pino": "^8.19.0",
+    "bullmq": "^5.1.0",
+    "@pinecone-database/pinecone": "^2.0.0",
+    "langchain": "^0.1.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.2.0"
+  }
+}

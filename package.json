@@ -1,0 +1,38 @@
+{
+  "name": "modern-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Next-generation Factory ERP with AI-first architecture",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean",
+    "deploy": "turbo run deploy",
+    "mcp:dev": "pnpm --filter mcp-orchestrator dev",
+    "kafka:start": "docker-compose -f infrastructure/docker/kafka-compose.yml up -d",
+    "services:up": "docker-compose -f infrastructure/docker/services-compose.yml up -d",
+    "k8s:deploy": "kubectl apply -f infrastructure/k8s/",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "husky": "^9.0.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*",
+    "tools/*"
+  ]
+}
