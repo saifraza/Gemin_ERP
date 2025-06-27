@@ -7,6 +7,12 @@
       "outputs": ["dist/**", ".next/**", "build/**"],
       "env": ["NODE_ENV", "RAILWAY_ENVIRONMENT"]
     },
+    "start": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true,
+      "env": ["NODE_ENV", "PORT", "DATABASE_URL", "REDIS_URL"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

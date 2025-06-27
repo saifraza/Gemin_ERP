@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd ../.. && pnpm install && pnpm build --filter @modern-erp/web"
+  },
+  "deploy": {
+    "startCommand": "cd ../.. && pnpm start --filter @modern-erp/web",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}
