@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd ../.. && pnpm install --no-frozen-lockfile && pnpm build --filter @modern-erp/api-gateway"
+buildCommand = "npm install -g pnpm@8 && cd ../.. && pnpm install --no-frozen-lockfile && pnpm build --filter @modern-erp/api-gateway"
 
 [deploy]
 startCommand = "cd services/api-gateway && node dist/index.js"
