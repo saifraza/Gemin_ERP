@@ -5,7 +5,7 @@ import { logger } from 'hono/logger';
 import cron from 'node-cron';
 import pino from 'pino';
 import { PrismaClient } from '@prisma/client';
-import { PostgreSQLCache } from '@modern-erp/shared/cache';
+import { PostgreSQLCache } from './shared/cache/index.js';
 
 const log = pino({ name: 'event-processor' });
 

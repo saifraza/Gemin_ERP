@@ -6,7 +6,7 @@ import { WebSocketServer } from 'ws';
 import pino from 'pino';
 import { jwtVerify } from 'jose';
 import { PrismaClient } from '@prisma/client';
-import { PostgreSQLCache, PostgreSQLRateLimiter } from '@modern-erp/shared/cache';
+import { PostgreSQLCache, PostgreSQLRateLimiter } from './shared/cache/index.js';
 
 const log = pino({ name: 'api-gateway' });
 

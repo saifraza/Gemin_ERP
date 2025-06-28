@@ -4,7 +4,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { prisma, cache } from '../index.js';
-import { PostgreSQLSessionStore } from '@modern-erp/shared/cache';
+import { PostgreSQLSessionStore } from '../shared/cache/index.js';
 
 const authRoutes = new Hono();
 

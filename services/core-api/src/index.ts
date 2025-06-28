@@ -5,7 +5,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
-import { PostgreSQLCache } from '@modern-erp/shared/cache';
+import { PostgreSQLCache } from './shared/cache/index.js';
 
 // Routes
 import { authRoutes } from './routes/auth.js';
