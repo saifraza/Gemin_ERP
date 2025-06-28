@@ -51,13 +51,16 @@ test_model "claude" "Analyze the efficiency of a sugar factory with 90% recovery
 # Test 4: Test GPT-4
 test_model "gpt4" "List the main components of a sugar factory ERP system"
 
-# Test 5: Test auto-selection with Indian context
+# Test 5: Test DeepSeek
+test_model "deepseek" "Write a Python function to optimize sugar production efficiency"
+
+# Test 6: Test auto-selection with Indian context
 test_model "auto" "Calculate GST on ₹50,000 worth of sugar at 5% rate"
 
-# Test 6: Test auto-selection with code request
+# Test 7: Test auto-selection with code request
 test_model "auto" "Write a function to calculate ethanol yield from sugarcane"
 
-# Test 7: Test factory status tool
+# Test 8: Test factory status tool
 echo "🏭 Testing factory status tool..."
 curl -s -X POST "$MCP_URL/api/mcp/tools/execute" \
     -H "Content-Type: application/json" \

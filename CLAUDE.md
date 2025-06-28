@@ -6,10 +6,12 @@
 - **Gemini API Key**: ✅ [Configured in Railway environment]
 - **Claude API Key**: ✅ [Configured in Railway environment]
 - **OpenAI API Key**: ❌ [Not yet configured - add to Railway]
+- **DeepSeek API Key**: ❌ [Not yet configured - add to Railway]
 
 ### LLM Router Implementation
-- Multi-model support (Gemini, Claude, GPT-4)
+- Multi-model support (Gemini, Claude, GPT-4, DeepSeek)
 - Intelligent auto-selection based on task type
+- DeepSeek selected for code generation and cost optimization
 - Fallback mechanisms for reliability
 - Cost optimization logic
 

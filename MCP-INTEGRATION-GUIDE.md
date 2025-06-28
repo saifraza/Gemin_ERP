@@ -10,6 +10,7 @@ Add these environment variables to your `mcp-orchestrator` service in Railway:
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 GEMINI_API_KEY=your-gemini-api-key-here
 OPENAI_API_KEY=your-openai-api-key-here
+DEEPSEEK_API_KEY=your-deepseek-api-key-here
 ```
 
 Note: The actual API keys should be added directly in Railway's environment variables section, not committed to the repository.
@@ -51,6 +52,12 @@ Run the test script:
 - **Best for**: General tasks, tool calling, function execution
 - **Strengths**: Versatile, good at following instructions, tool integration
 - **Use cases**: Data extraction, API calls, structured outputs
+
+### DeepSeek Chat
+- **Best for**: Code generation, technical tasks, cost optimization
+- **Strengths**: Excellent at coding, very cost-effective (10x cheaper than Gemini!)
+- **Use cases**: Code generation, debugging, technical documentation, long conversations
+- **Special**: Best value for money - only $0.0001 per 1K input tokens!
 
 ### Auto Selection
 - **How it works**: Automatically picks the best model based on your query

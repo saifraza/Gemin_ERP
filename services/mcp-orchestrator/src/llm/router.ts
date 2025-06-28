@@ -10,7 +10,7 @@ const log = pino({ name: 'llm-router' });
 export interface LLMRequest {
   prompt: string;
   context?: any;
-  model?: 'gemini' | 'claude' | 'gpt4' | 'auto';
+  model?: 'gemini' | 'claude' | 'gpt4' | 'deepseek' | 'auto';
   temperature?: number;
   maxTokens?: number;
   tools?: any[];
@@ -20,6 +20,7 @@ export class LLMRouter {
   private gemini: GoogleGenerativeAI;
   private anthropic: Anthropic;
   private openai: OpenAI;
+  private deepseek: OpenAI; // DeepSeek uses OpenAI-compatible API
   private toolCaller: ToolCaller;
   private tokenOptimizer: TokenOptimizer;
   private modelCapabilities = {
@@ -38,12 +39,24 @@ export class LLMRouter {
       costPerToken: 0.00003,
       maxTokens: 128000,
     },
+    deepseek: {
+      strengths: ['coding', 'reasoning', 'cost-effective', 'long-context'],
+      costPerToken: 0.000002, // Much cheaper than others
+      maxTokens: 128000,
+    },
   };
 
   constructor() {
     this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
     this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+    
+    // DeepSeek uses OpenAI-compatible API
+    this.deepseek = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      baseURL: 'https://api.deepseek.com/v1',
+    });
+    
     this.toolCaller = new ToolCaller();
     this.tokenOptimizer = new TokenOptimizer();
     
@@ -52,6 +65,7 @@ export class LLMRouter {
       hasGemini: !!process.env.GEMINI_API_KEY,
       hasClaude: !!process.env.ANTHROPIC_API_KEY,
       hasOpenAI: !!process.env.OPENAI_API_KEY,
+      hasDeepSeek: !!process.env.DEEPSEEK_API_KEY,
     }, 'API keys configured');
   }
 
@@ -102,6 +116,9 @@ export class LLMRouter {
           case 'gpt4':
             result = await this.chatWithGPT(request);
             break;
+          case 'deepseek':
+            result = await this.chatWithDeepSeek(request);
+            break;
           default:
             result = await this.chatWithGemini(request); // Default fallback
         }
@@ -142,19 +159,24 @@ export class LLMRouter {
       return 'gemini';
     }
     
-    // Complex reasoning -> Claude
-    if (prompt.includes('analyze') || prompt.includes('explain') || prompt.includes('compare')) {
-      return 'claude';
+    // Code generation -> DeepSeek (best for code and very cost-effective)
+    if (prompt.includes('code') || prompt.includes('function') || prompt.includes('implement')) {
+      return 'deepseek';
     }
     
-    // Code generation -> Claude
-    if (prompt.includes('code') || prompt.includes('function') || prompt.includes('implement')) {
+    // Complex reasoning -> Claude
+    if (prompt.includes('analyze') || prompt.includes('explain') || prompt.includes('compare')) {
       return 'claude';
     }
     
     // Tool use -> GPT-4
     if (request.tools && request.tools.length > 0) {
       return 'gpt4';
+    }
+    
+    // Cost optimization -> DeepSeek for general queries
+    if (prompt.length > 500) {
+      return 'deepseek'; // Very cost-effective for long prompts
     }
     
     // Default to Gemini for cost efficiency
@@ -237,6 +259,33 @@ export class LLMRouter {
       response: completion.choices[0].message.content,
       toolCalls: completion.choices[0].message.tool_calls,
       usage: completion.usage,
+    };
+  }
+
+  private async chatWithDeepSeek(request: LLMRequest) {
+    if (!process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY === 'your-deepseek-api-key-here') {
+      throw new Error('DeepSeek API key not configured. Please add DEEPSEEK_API_KEY to Railway environment variables.');
+    }
+    
+    const completion = await this.deepseek.chat.completions.create({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'user',
+          content: this.buildPrompt(request),
+        },
+      ],
+      temperature: request.temperature || 0.7,
+      max_tokens: request.maxTokens || 4096,
+    });
+
+    return {
+      model: 'deepseek-chat',
+      response: completion.choices[0].message.content,
+      usage: {
+        promptTokens: completion.usage?.prompt_tokens,
+        completionTokens: completion.usage?.completion_tokens,
+      },
     };
   }
 

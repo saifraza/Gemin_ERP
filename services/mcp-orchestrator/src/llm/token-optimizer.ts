@@ -25,6 +25,7 @@ export class TokenOptimizer {
     'claude-3-opus': { input: 0.015, output: 0.075 },
     'gpt-4-turbo': { input: 0.01, output: 0.03 },
     'gemini-1.5-pro': { input: 0.001, output: 0.002 },
+    'deepseek-chat': { input: 0.0001, output: 0.0002 }, // 10x cheaper than Gemini!
   };
 
   /**

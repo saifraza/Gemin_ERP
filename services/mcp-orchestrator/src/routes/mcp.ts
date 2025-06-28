@@ -74,24 +74,35 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
           name: 'Gemini 1.5 Pro',
           provider: 'Google',
           strengths: ['vision', 'multimodal', 'long-context', 'indian-context'],
+          costLevel: '$$',
         },
         {
           id: 'claude',
           name: 'Claude 3 Opus',
           provider: 'Anthropic',
           strengths: ['reasoning', 'coding', 'analysis', 'safety'],
+          costLevel: '$$$',
         },
         {
           id: 'gpt4',
           name: 'GPT-4 Turbo',
           provider: 'OpenAI',
           strengths: ['general', 'tools', 'function-calling'],
+          costLevel: '$$$',
+        },
+        {
+          id: 'deepseek',
+          name: 'DeepSeek Chat',
+          provider: 'DeepSeek',
+          strengths: ['coding', 'reasoning', 'cost-effective', 'long-context'],
+          costLevel: '$', // Very cheap!
         },
         {
           id: 'auto',
           name: 'Auto Select',
           provider: 'System',
           strengths: ['chooses best model based on task'],
+          costLevel: 'Varies',
         },
       ],
     });
