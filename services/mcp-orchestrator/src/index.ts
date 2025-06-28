@@ -12,6 +12,20 @@ import pino from 'pino';
 
 const log = pino({ name: 'mcp-orchestrator' });
 
+// Log environment variables (without exposing keys)
+log.info({
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  hasDatabase: !!process.env.DATABASE_URL,
+  hasJWT: !!process.env.JWT_SECRET,
+  apiKeys: {
+    GEMINI: process.env.GEMINI_API_KEY ? `${process.env.GEMINI_API_KEY.substring(0, 10)}...` : 'NOT SET',
+    ANTHROPIC: process.env.ANTHROPIC_API_KEY ? `${process.env.ANTHROPIC_API_KEY.substring(0, 10)}...` : 'NOT SET',
+    OPENAI: process.env.OPENAI_API_KEY ? `${process.env.OPENAI_API_KEY.substring(0, 10)}...` : 'NOT SET',
+    DEEPSEEK: process.env.DEEPSEEK_API_KEY ? `${process.env.DEEPSEEK_API_KEY.substring(0, 10)}...` : 'NOT SET',
+  }
+}, 'MCP Orchestrator starting with environment');
+
 // Initialize app
 const app = new Hono();
 let server: any;
