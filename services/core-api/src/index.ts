@@ -17,7 +17,30 @@ const log = pino({ name: 'core-api' });
 
 // Initialize services
 export const prisma = new PrismaClient();
-export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Initialize Redis with better error handling
+let redis: Redis;
+try {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    log.error('REDIS_URL environment variable is not set');
+    throw new Error('REDIS_URL is required');
+  }
+  log.info(`Connecting to Redis at: ${redisUrl.replace(/:[^:@]*@/, ':****@')}`);
+  redis = new Redis(redisUrl, {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => {
+      log.warn(`Redis connection attempt ${times}`);
+      return Math.min(times * 50, 2000);
+    }
+  });
+  redis.on('error', (err) => log.error('Redis error:', err));
+  redis.on('connect', () => log.info('Redis connected successfully'));
+} catch (error) {
+  log.error('Failed to initialize Redis:', error);
+  throw error;
+}
+export { redis };
 
 const app = new Hono();
 
@@ -30,23 +53,48 @@ app.use('*', logger());
 
 // Health check
 app.get('/health', async (c) => {
+  const health = {
+    status: 'healthy',
+    service: 'core-api',
+    timestamp: new Date().toISOString(),
+    database: 'unknown',
+    cache: 'unknown',
+    environment: {
+      hasRedisUrl: !!process.env.REDIS_URL,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      port: process.env.PORT,
+      nodeEnv: process.env.NODE_ENV
+    }
+  };
+
+  // Check database
   try {
     await prisma.$queryRaw`SELECT 1`;
-    await redis.ping();
-    
-    return c.json({ 
-      status: 'healthy',
-      service: 'core-api',
-      database: 'connected',
-      cache: 'connected',
-      timestamp: new Date().toISOString()
-    });
+    health.database = 'connected';
   } catch (error) {
-    return c.json({ 
-      status: 'unhealthy',
-      error: error.message 
-    }, 503);
+    health.database = 'error';
+    health.status = 'degraded';
+    log.error('Database health check failed:', error);
   }
+
+  // Check Redis
+  try {
+    if (redis && redis.status === 'ready') {
+      await redis.ping();
+      health.cache = 'connected';
+    } else {
+      health.cache = 'connecting';
+      health.status = 'degraded';
+    }
+  } catch (error) {
+    health.cache = 'error';
+    health.status = 'degraded';
+    log.error('Redis health check failed:', error);
+  }
+
+  // Return appropriate status code
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  return c.json(health, statusCode);
 });
 
 // Mount routes

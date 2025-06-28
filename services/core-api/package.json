@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
+    "start:basic": "node dist/basic-index.js",
     "test": "vitest",
     "type-check": "tsc --noEmit",
     "db:migrate": "cd database && npx prisma migrate deploy",
