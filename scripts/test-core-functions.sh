@@ -90,18 +90,24 @@ register_response=$(curl -s -X POST "$CORE_API/api/auth/test-register" \
 if echo "$register_response" | grep -q "user"; then
     print_result 0 "User registration"
     USER_ID=$(get_json_value "$register_response" "id")
+    REGISTERED=true
 else
     print_result 1 "User registration: $register_response"
+    REGISTERED=false
 fi
 
 # Test user login
 echo "Testing user login..."
-login_response=$(curl -s -X POST "$CORE_API/api/auth/login" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"email\": \"$TEST_EMAIL\",
-        \"password\": \"$TEST_PASSWORD\"
-    }")
+if [ "$REGISTERED" = "true" ]; then
+    login_response=$(curl -s -X POST "$CORE_API/api/auth/login" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"email\": \"$TEST_EMAIL\",
+            \"password\": \"$TEST_PASSWORD\"
+        }")
+else
+    login_response='{"error":"Skipped - registration failed"}'
+fi
 
 if echo "$login_response" | grep -q "token"; then
     print_result 0 "User login"

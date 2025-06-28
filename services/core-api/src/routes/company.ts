@@ -5,6 +5,11 @@ import { prisma } from '../index.js';
 
 const companyRoutes = new Hono();
 
+// Health check
+companyRoutes.get('/health', (c) => {
+  return c.json({ status: 'ok', message: 'Company routes are loaded' });
+});
+
 // Get all companies
 companyRoutes.get('/', async (c) => {
   const companies = await prisma.company.findMany({
