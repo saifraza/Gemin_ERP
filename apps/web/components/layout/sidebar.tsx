@@ -26,6 +26,7 @@ const defaultSections: SidebarSection[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', badge: 5 },
       { id: 'master-data', label: 'Master Data', href: '/master-data' },
+      { id: 'user-roles', label: 'User Roles', href: '/user-roles' },
       { id: 'new-company', label: 'Company Setup', href: '/company/new' },
       { id: 'test-backend', label: 'Test Backend', href: '/test' },
     ]
