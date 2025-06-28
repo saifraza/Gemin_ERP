@@ -8,7 +8,7 @@ Add these environment variables to the API Gateway service in Railway:
 CORE_API_URL=http://dynamic-nourishment.railway.internal
 MCP_ORCHESTRATOR_URL=http://energetic-vision.railway.internal
 EVENT_PROCESSOR_URL=http://incredible-adaptation.railway.internal
-REDIS_URL=${{Redis.REDIS_URL}}
+REDIS_URL=${{ Redis-jr2e.REDIS_URL }}
 JWT_SECRET=f1606f654e8061ae20923dbc459c171718ca368f84ce697a82b6926e5dabd07f
 NODE_ENV=production
 ALLOWED_ORIGINS=https://new_erp.railway.internal,https://web-production-66cf.up.railway.app
@@ -18,7 +18,7 @@ ALLOWED_ORIGINS=https://new_erp.railway.internal,https://web-production-66cf.up.
 
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-REDIS_URL=${{Redis.REDIS_URL}}
+REDIS_URL=${{ Redis-jr2e.REDIS_URL }}
 JWT_SECRET=f1606f654e8061ae20923dbc459c171718ca368f84ce697a82b6926e5dabd07f
 NODE_ENV=production
 ```
@@ -27,7 +27,7 @@ NODE_ENV=production
 
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-REDIS_URL=${{Redis.REDIS_URL}}
+REDIS_URL=${{ Redis-jr2e.REDIS_URL }}
 JWT_SECRET=f1606f654e8061ae20923dbc459c171718ca368f84ce697a82b6926e5dabd07f
 NODE_ENV=production
 # Add when ready:
@@ -39,7 +39,7 @@ NODE_ENV=production
 
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-REDIS_URL=${{Redis.REDIS_URL}}
+REDIS_URL=${{ Redis-jr2e.REDIS_URL }}
 JWT_SECRET=f1606f654e8061ae20923dbc459c171718ca368f84ce697a82b6926e5dabd07f
 NODE_ENV=production
 ```
