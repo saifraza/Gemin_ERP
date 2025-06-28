@@ -12,7 +12,7 @@ interface User {
   email: string;
   username: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
   accessLevel: 'HQ' | 'FACTORY' | 'DIVISION';
   company?: {
     id: string;
