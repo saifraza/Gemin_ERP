@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { FactorySelector } from './factory-selector';
+import { LogOut } from 'lucide-react';
 
 interface TopHeaderProps {
   companyName?: string;
@@ -22,6 +24,7 @@ export function TopHeader({
   userRole = "Operations Manager",
   userId = "SJ2847"
 }: TopHeaderProps) {
+  const router = useRouter();
   const [serverStatus, setServerStatus] = useState({ server: 'PROD-01', responseTime: 87 });
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
@@ -38,6 +41,10 @@ export function TopHeader({
   }, []);
 
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+  
+  const handleLogout = () => {
+    router.push('/auth/logout');
+  };
 
   return (
     <div className="top-header">
@@ -65,6 +72,13 @@ export function TopHeader({
         <div className="w-8 h-8 bg-slate-700 rounded flex items-center justify-center font-semibold text-sm">
           {userInitials}
         </div>
+        <button
+          onClick={handleLogout}
+          className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+          title="Logout"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

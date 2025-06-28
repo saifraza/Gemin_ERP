@@ -97,13 +97,19 @@ export default function LoginPage() {
           </form>
         </Card>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-500">
-            For testing, use the Test Backend page to create a test user
-          </p>
-          <a href="/test" className="text-sm text-blue-600 hover:underline">
-            Go to Test Backend →
-          </a>
+        <div className="mt-6 text-center space-y-3">
+          <div className="text-sm text-gray-500">
+            Don't have an account?{' '}
+            <a href="/auth/register" className="text-blue-600 hover:underline">
+              Register here
+            </a>
+          </div>
+          <div className="text-sm text-gray-500">
+            New company?{' '}
+            <a href="/setup" className="text-blue-600 hover:underline">
+              Start setup
+            </a>
+          </div>
         </div>
       </div>
     </div>

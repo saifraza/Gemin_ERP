@@ -8,27 +8,44 @@ export function middleware(request: NextRequest) {
   const publicRoutes = [
     '/auth/login',
     '/auth/register',
-    '/api',
+    '/auth/logout',
+    '/setup',
     '/_next',
     '/favicon.ico',
-    '/',
-    '/test'
   ];
   
+  // API routes have their own authentication
+  if (pathname.startsWith('/api')) {
+    return NextResponse.next();
+  }
+  
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route));
   
   if (isPublicRoute) {
     return NextResponse.next();
   }
   
   // For all other routes, check for auth token
-  const token = request.cookies.get('auth_token')?.value;
-  const authStorage = request.cookies.get('auth-storage')?.value;
+  // Check localStorage value from the auth store
+  const authStorageCookie = request.cookies.get('auth-storage')?.value;
+  let isAuthenticated = false;
   
-  // Check both cookie and localStorage (via cookie)
-  if (!token && !authStorage) {
-    // Redirect to login if no authentication
+  if (authStorageCookie) {
+    try {
+      const authData = JSON.parse(authStorageCookie);
+      isAuthenticated = authData?.state?.isAuthenticated || false;
+    } catch (e) {
+      console.error('Failed to parse auth storage:', e);
+    }
+  }
+  
+  // Also check for auth_token cookie
+  const token = request.cookies.get('auth_token')?.value;
+  
+  // If no authentication found, redirect to login
+  if (!isAuthenticated && !token) {
+    console.log(`Middleware: No auth for ${pathname}, redirecting to login`);
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
   

@@ -14,8 +14,8 @@ export default function HomePage() {
       // User is logged in, go to dashboard
       router.push('/dashboard');
     } else {
-      // No user logged in, go to setup
-      router.push('/setup');
+      // No user logged in, go to login
+      router.push('/auth/login');
     }
   }, [router]);
 
