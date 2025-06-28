@@ -240,7 +240,17 @@ export default function MasterDataPage() {
         {/* Users Tab */}
         {activeTab === 'users' && (
           <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Users</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Users</h2>
+              <Button 
+                variant="outline"
+                onClick={() => window.location.href = '/switch-company'}
+                className="flex items-center gap-2"
+              >
+                <Building2 className="w-4 h-4" />
+                Switch Company Tool
+              </Button>
+            </div>
             {users.length === 0 ? (
               <p className="text-gray-500">No users found</p>
             ) : (
@@ -284,6 +294,14 @@ export default function MasterDataPage() {
                         </td>
                         <td className="p-2">
                           <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.location.href = `/switch-company?userId=${user.id}`}
+                              title="Switch Company"
+                            >
+                              <Building2 className="w-3 h-3" />
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"
@@ -367,9 +385,23 @@ export default function MasterDataPage() {
             {factories.length} {factories.length === 1 ? 'factory' : 'factories'} in the system.
           </p>
           {companies.length > 1 && (
-            <p className="text-sm text-orange-600 mt-2">
-              ⚠️ You have multiple companies. For single-company operation, please delete the extra companies.
-            </p>
+            <>
+              <p className="text-sm text-orange-600 mt-2">
+                ⚠️ You have multiple companies. For single-company operation, please delete the extra companies.
+              </p>
+              <div className="mt-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  To delete a company with users, first move users to another company:
+                </p>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/switch-company'}
+                >
+                  Go to Switch Company Tool
+                </Button>
+              </div>
+            </>
           )}
         </Card>
       </div>
