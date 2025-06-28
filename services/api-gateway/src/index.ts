@@ -1,3 +1,5 @@
+console.log('API Gateway starting up...');
+
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -473,14 +475,21 @@ function setupWebSocketServer() {
 const port = parseInt(process.env.PORT || '4000');
 log.info(`Starting API Gateway on port ${port}`);
 
-server = serve({
-  fetch: app.fetch,
-  port,
-  hostname: '0.0.0.0',
-}, (info) => {
-  log.info(`API Gateway running on http://0.0.0.0:${info.port}`);
-  setupWebSocketServer();
-});
+try {
+  server = serve({
+    fetch: app.fetch,
+    port,
+    hostname: '0.0.0.0',
+  }, (info) => {
+    log.info(`API Gateway running on http://0.0.0.0:${info.port}`);
+    console.log(`API Gateway started successfully on port ${info.port}`);
+    setupWebSocketServer();
+  });
+} catch (error) {
+  console.error('Failed to start API Gateway:', error);
+  log.error({ error }, 'Failed to start server');
+  process.exit(1);
+}
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {

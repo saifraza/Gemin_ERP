@@ -2,6 +2,7 @@
   "name": "@modern-erp/api-gateway",
   "version": "1.0.0",
   "type": "module",
+  "main": "dist/index.js",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
