@@ -20,17 +20,26 @@ export class EventBus extends EventEmitter {
 
   constructor() {
     super();
-    this.initialize();
+    // Delay initialization to avoid connection storms
+    setTimeout(() => this.initialize(), 2000);
   }
 
   private async initialize() {
     try {
+      // Check if Redis is explicitly disabled
+      if (process.env.DISABLE_REDIS === 'true') {
+        log.info('Redis is disabled by DISABLE_REDIS=true, using in-memory event bus only');
+        return;
+      }
+      
       const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST || null;
       
       if (!redisUrl) {
         log.warn('No Redis URL provided, running without Redis pub/sub');
         return;
       }
+      
+      log.info(`Attempting Redis connection to: ${redisUrl.substring(0, 30)}...`);
 
       // Initialize Redis with proper error handling
       this.redis = new Redis(redisUrl, {
@@ -47,9 +56,15 @@ export class EventBus extends EventEmitter {
         enableOfflineQueue: false,
       });
 
-      // Handle Redis errors gracefully
+      // Handle Redis errors gracefully - limit logging to avoid spam
+      let errorCount = 0;
       this.redis.on('error', (err) => {
-        log.error({ error: err.message }, 'Redis connection error');
+        errorCount++;
+        if (errorCount <= 5) {
+          log.error({ error: err.message, code: err.code }, 'Redis connection error');
+        } else if (errorCount === 6) {
+          log.error('Suppressing further Redis errors to avoid log spam');
+        }
       });
 
       this.redis.on('connect', () => {
