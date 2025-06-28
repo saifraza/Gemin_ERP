@@ -9,6 +9,7 @@ Add these environment variables to your `mcp-orchestrator` service in Railway:
 ```bash
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 GEMINI_API_KEY=your-gemini-api-key-here
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
 Note: The actual API keys should be added directly in Railway's environment variables section, not committed to the repository.
@@ -45,6 +46,11 @@ Run the test script:
 - **Best for**: Complex reasoning, code generation, detailed analysis
 - **Strengths**: Deep understanding, safety, nuanced explanations
 - **Use cases**: Factory optimization, troubleshooting, report generation
+
+### GPT-4 Turbo
+- **Best for**: General tasks, tool calling, function execution
+- **Strengths**: Versatile, good at following instructions, tool integration
+- **Use cases**: Data extraction, API calls, structured outputs
 
 ### Auto Selection
 - **How it works**: Automatically picks the best model based on your query
