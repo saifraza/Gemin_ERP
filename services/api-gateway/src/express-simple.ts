@@ -17,10 +17,8 @@ const ensureProtocol = (url: string | undefined) => {
 };
 
 // Service URLs - Use environment variables provided by Railway
-// Temporary: Use public URLs if internal networking fails
 const services = {
-  core: ensureProtocol(process.env.CORE_API_URL) || 
-    (process.env.RAILWAY_ENVIRONMENT === 'production' ? 'https://core-api-production-76b9.up.railway.app' : undefined),
+  core: ensureProtocol(process.env.CORE_API_URL),
   mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL),
   eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL),
 };

@@ -20,7 +20,7 @@ authRoutes.get('/health', (c) => {
 
 // Schemas
 const loginSchema = z.object({
-  email: z.string().email().or(z.string().min(3)), // Allow username too
+  username: z.string().min(3), // Use username for login
   password: z.string().min(4),
 });
 
@@ -40,15 +40,12 @@ const secret = new TextEncoder().encode(
 
 // Login
 authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
-  const { email, password } = c.req.valid('json');
+  const { username, password } = c.req.valid('json');
   
-  // Find user by email or username
+  // Find user by username
   const user = await prisma.user.findFirst({
     where: {
-      OR: [
-        { email },
-        { username: email },
-      ],
+      username,
       isActive: true,
     },
     include: {

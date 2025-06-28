@@ -17,11 +17,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
   // Auth
-  async login(email: string, password: string) {
+  async login(username: string, password: string) {
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
     return handleResponse<{ token: string; user: any }>(response);
   },

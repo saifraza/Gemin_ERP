@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth';
 import { TopHeader } from '@/components/layout/top-header';
 import { NavBar } from '@/components/layout/nav-bar';
 import { Toolbar } from '@/components/layout/toolbar';
@@ -95,11 +96,19 @@ const inventoryData = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user, companyName, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [sidebarItem, setSidebarItem] = useState('operations-overview');
   const [aiOpen, setAiOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notification, setNotification] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, router]);
 
   const showNotification = (message: string) => {
     setNotification(message);
@@ -158,7 +167,13 @@ export default function DashboardPage() {
 
   return (
     <div className="h-screen flex flex-col">
-      <TopHeader />
+      <TopHeader 
+        companyName={companyName || 'MSPIL'}
+        companyCode="🏭"
+        userName={user?.name || 'Guest'}
+        userRole={user?.role || 'VIEWER'}
+        userId={user?.username || 'guest'}
+      />
       <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
       <Toolbar
         onNewTransaction={() => handleCommand('new-transaction')}
@@ -310,8 +325,8 @@ export default function DashboardPage() {
       </div>
       
       <div className="footer">
-        <div>© 2024 Acme Corporation | ERP System v3.2.4</div>
-        <div>Last Update: 14:23:45 | User: SJ2847 | Session: 2h 45m</div>
+        <div>© 2024 {companyName || 'MSPIL'} | ERP System v3.2.4</div>
+        <div>Last Update: {new Date().toLocaleTimeString()} | User: {user?.username || 'Guest'} | Role: {user?.role || 'N/A'}</div>
       </div>
       
       <CommandPalette onCommand={handleCommand} />

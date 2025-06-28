@@ -66,3 +66,5 @@ When code changes are made, run these commands to ensure quality:
 2. **No hardcoded ports or URLs** - Everything through environment variables
 3. **Express for API Gateway** - Simpler than Hono for proxy functionality
 4. **Railway internal networking** - Fast communication between services
+5. **Username-based login** - Users login with username, not email
+6. **Company name display** - Company name shown throughout the UI where appropriate

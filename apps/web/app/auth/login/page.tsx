@@ -11,7 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
   });
 
@@ -20,7 +20,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await api.login(formData.email, formData.password);
+      const result = await api.login(formData.username, formData.password);
       
       // Save token
       localStorage.setItem('auth_token', result.token);
@@ -54,16 +54,16 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email or Username
+                Username
               </label>
               <input
                 type="text"
-                name="email"
-                value={formData.email}
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="john@company.com"
+                placeholder="johndoe"
               />
             </div>
 

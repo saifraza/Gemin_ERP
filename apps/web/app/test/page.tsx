@@ -98,8 +98,8 @@ export default function TestPage() {
       const registerResult = await api.register(testUser);
       console.log('Registered user:', registerResult);
       
-      // Then try to login
-      const loginResult = await api.login(testUser.email, testUser.password);
+      // Then try to login with username
+      const loginResult = await api.login(testUser.username, testUser.password);
       console.log('Login result:', loginResult);
       
       if (loginResult.token) {
