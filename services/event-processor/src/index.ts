@@ -275,9 +275,9 @@ const port = parseInt(process.env.PORT || '3006');
 serve({
   fetch: app.fetch,
   port,
-  hostname: '0.0.0.0',
+  hostname: '::', // Bind to IPv6 for Railway internal networking
 }, (info) => {
-  log.info(`Event Processor running on http://0.0.0.0:${info.port}`);
+  log.info(`Event Processor running on http://[::]:${info.port} (IPv6)`);
   
   // Setup scheduled jobs after server starts
   setupScheduledJobs();

@@ -109,10 +109,10 @@ log.info(`Starting Core API with PORT env: ${process.env.PORT}, parsed as: ${por
 serve({
   fetch: app.fetch,
   port,
-  hostname: '0.0.0.0', // Important for Railway!
+  hostname: '::', // Bind to IPv6 for Railway internal networking
 }, (info) => {
-  log.info(`Core API running on http://0.0.0.0:${info.port}`);
-  log.info(`Confirmed: Server is listening on port ${info.port}`);
+  log.info(`Core API running on http://[::]:${info.port}`);
+  log.info(`Confirmed: Server is listening on port ${info.port} (IPv6)`);
   
   // Cache is ready immediately with PostgreSQL
   log.info('PostgreSQL cache initialized and ready');

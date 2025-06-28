@@ -145,8 +145,8 @@ app.all('/api/*', async (req, res) => {
 });
 
 // Start server
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Express API Gateway listening on port ${port}`);
+app.listen(port, '::', () => {
+  console.log(`Express API Gateway listening on port ${port} (IPv6)`);
 });
 
 // Handle errors

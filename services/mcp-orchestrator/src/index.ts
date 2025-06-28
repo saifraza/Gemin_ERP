@@ -91,11 +91,11 @@ const PORT = process.env.PORT || 3001;
 server = serve({
   fetch: app.fetch,
   port: Number(PORT),
-  hostname: '0.0.0.0',
+  hostname: '::', // Bind to IPv6 for Railway internal networking
 }, () => {
-  log.info(`MCP Orchestrator running on http://0.0.0.0:${PORT}`);
+  log.info(`MCP Orchestrator running on http://[::]:${PORT} (IPv6)`);
   setupWebSocketServer();
-  log.info(`WebSocket server running on ws://0.0.0.0:${PORT}`);
+  log.info(`WebSocket server running on ws://[::]:${PORT} (IPv6)`);
   
   // Initialize Kafka consumer after server starts
   initializeKafkaConsumer().catch(error => {

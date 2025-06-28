@@ -13,6 +13,9 @@
 - Internal hostnames follow pattern: `service-name.railway.internal`
 - No port specification needed for internal URLs
 - Service names in Railway dashboard determine the internal hostname
+- **IMPORTANT**: All services must bind to `::` (IPv6) instead of `0.0.0.0` (IPv4)
+  - Hono: `hostname: '::'`
+  - Express: `app.listen(port, '::', ...)`
 
 ### Example (CORRECT):
 ```javascript
