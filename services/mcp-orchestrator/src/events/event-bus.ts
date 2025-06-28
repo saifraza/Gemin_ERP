@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import Redis from 'ioredis';
+import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
 
 const log = pino({ name: 'event-bus' });
@@ -14,198 +14,145 @@ export interface Event {
 }
 
 export class EventBus extends EventEmitter {
-  private redis: Redis | null = null;
-  private redisSubscriber: Redis | null = null;
-  private isConnected = false;
+  private prisma: PrismaClient;
+  private pollInterval: NodeJS.Timeout | null = null;
+  private lastEventId: string | null = null;
 
   constructor() {
     super();
-    // Delay initialization to avoid connection storms
-    setTimeout(() => this.initialize(), 2000);
+    this.prisma = new PrismaClient();
+    // Start polling for events
+    this.startEventPolling();
   }
 
-  private async initialize() {
-    try {
-      // Check if Redis is explicitly disabled
-      if (process.env.DISABLE_REDIS === 'true') {
-        log.info('Redis is disabled by DISABLE_REDIS=true, using in-memory event bus only');
-        return;
-      }
-      
-      const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST || null;
-      
-      if (!redisUrl) {
-        log.warn('No Redis URL provided, running without Redis pub/sub');
-        return;
-      }
-      
-      log.info(`Attempting Redis connection to: ${redisUrl.substring(0, 30)}...`);
-
-      // Initialize Redis with proper error handling
-      this.redis = new Redis(redisUrl, {
-        retryStrategy: (times) => {
-          if (times > 10) {
-            log.error('Redis connection failed after 10 attempts');
-            return null;
-          }
-          const delay = Math.min(times * 50, 2000);
-          return delay;
-        },
-        maxRetriesPerRequest: 3,
-        enableReadyCheck: true,
-        enableOfflineQueue: false,
-      });
-
-      // Handle Redis errors gracefully - limit logging to avoid spam
-      let errorCount = 0;
-      this.redis.on('error', (err) => {
-        errorCount++;
-        if (errorCount <= 5) {
-          log.error({ error: err.message, code: err.code }, 'Redis connection error');
-        } else if (errorCount === 6) {
-          log.error('Suppressing further Redis errors to avoid log spam');
-        }
-      });
-
-      this.redis.on('connect', () => {
-        log.info('Connected to Redis');
-      });
-
-      this.redis.on('ready', async () => {
-        log.info('Redis ready for commands');
-        this.isConnected = true;
-        
-        // Setup subscriber after connection is ready
-        try {
-          this.redisSubscriber = this.redis.duplicate();
-          await this.redisSubscriber.subscribe('erp:events:*');
-          
-          this.redisSubscriber.on('message', (channel, message) => {
-            try {
-              const event = JSON.parse(message);
-              this.emit(channel, event);
-              this.processEvent(event);
-            } catch (error) {
-              log.error(error, 'Failed to process Redis event');
-            }
-          });
-          
-          log.info('Redis pub/sub initialized successfully');
-        } catch (error) {
-          log.error({ error }, 'Failed to setup Redis subscriber');
-        }
-      });
-    } catch (error) {
-      log.error({ error }, 'Failed to initialize Redis, continuing without it');
-      this.redis = null;
-      this.redisSubscriber = null;
-    }
-  }
-
-  async publish(event: Event) {
-    // Always emit locally
-    this.emit(`erp:events:${event.type}`, event);
-    this.processEvent(event);
-
-    // Try to publish to Redis if connected
-    if (this.redis && this.isConnected) {
+  private startEventPolling() {
+    // Poll for new events every 500ms
+    this.pollInterval = setInterval(async () => {
       try {
-        await this.redis.publish(`erp:events:${event.type}`, JSON.stringify(event));
+        const query: any = {
+          where: {
+            type: { startsWith: 'mcp.' }, // Only poll for MCP-related events
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        };
+
+        // Only get events newer than the last one we processed
+        if (this.lastEventId) {
+          const lastEvent = await this.prisma.event.findUnique({
+            where: { id: this.lastEventId },
+          });
+          if (lastEvent) {
+            query.where.createdAt = { gt: lastEvent.createdAt };
+          }
+        }
+
+        const events = await this.prisma.event.findMany(query);
+
+        // Process events in chronological order
+        for (const event of events.reverse()) {
+          this.emit('event', {
+            id: event.id,
+            type: event.type,
+            source: event.source,
+            timestamp: event.createdAt.toISOString(),
+            data: event.data,
+            metadata: event.metadata as Record<string, any>,
+          });
+          this.lastEventId = event.id;
+        }
       } catch (error) {
-        log.error({ error }, 'Failed to publish to Redis');
+        log.error('Event polling error:', error);
       }
+    }, 500);
+  }
+
+  async publish(event: Omit<Event, 'id' | 'timestamp'>) {
+    try {
+      const createdEvent = await this.prisma.event.create({
+        data: {
+          type: event.type,
+          source: event.source,
+          data: event.data,
+          metadata: event.metadata || {},
+        },
+      });
+
+      const fullEvent: Event = {
+        id: createdEvent.id,
+        type: event.type,
+        source: event.source,
+        timestamp: createdEvent.createdAt.toISOString(),
+        data: event.data,
+        metadata: event.metadata,
+      };
+
+      // Emit locally immediately
+      this.emit('event', fullEvent);
+      this.emit(event.type, fullEvent);
+
+      log.info(`Event published: ${event.type}`);
+      return fullEvent;
+    } catch (error) {
+      log.error('Failed to publish event:', error);
+      throw error;
     }
   }
 
-  subscribe(pattern: string, handler: (event: Event) => void): () => void {
-    const eventHandler = (event: Event) => handler(event);
-    
+  subscribe(pattern: string, handler: (event: Event) => void) {
     if (pattern === '*') {
-      // Subscribe to all events
-      this.on('erp:events:*', eventHandler);
+      this.on('event', handler);
     } else {
-      // Subscribe to specific pattern
-      this.on(`erp:events:${pattern}`, eventHandler);
+      this.on(pattern, handler);
     }
 
-    // Return unsubscribe function
+    log.info(`Subscribed to pattern: ${pattern}`);
+    
     return () => {
       if (pattern === '*') {
-        this.off('erp:events:*', eventHandler);
+        this.off('event', handler);
       } else {
-        this.off(`erp:events:${pattern}`, eventHandler);
+        this.off(pattern, handler);
       }
     };
   }
 
-  private processEvent(event: Event) {
-    // AI-driven event processing
-    switch (event.type) {
-      case 'production.anomaly':
-        this.handleProductionAnomaly(event);
-        break;
-      case 'equipment.failure':
-        this.handleEquipmentFailure(event);
-        break;
-      case 'quality.alert':
-        this.handleQualityAlert(event);
-        break;
-      case 'procurement.request':
-        this.handleProcurementRequest(event);
-        break;
+  async getEvents(filter?: { type?: string; source?: string; limit?: number }) {
+    try {
+      const where: any = {};
+      if (filter?.type) {
+        where.type = filter.type;
+      }
+      if (filter?.source) {
+        where.source = filter.source;
+      }
+
+      const events = await this.prisma.event.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: filter?.limit || 100,
+      });
+
+      return events.map(event => ({
+        id: event.id,
+        type: event.type,
+        source: event.source,
+        timestamp: event.createdAt.toISOString(),
+        data: event.data,
+        metadata: event.metadata as Record<string, any>,
+      }));
+    } catch (error) {
+      log.error('Failed to get events:', error);
+      return [];
     }
   }
 
-  private async handleProductionAnomaly(event: Event) {
-    log.info({ event }, 'Processing production anomaly');
-    
-    // Trigger AI analysis
-    this.emit('ai:analyze', {
-      type: 'anomaly',
-      context: event.data,
-      actions: ['diagnose', 'recommend', 'alert'],
-    });
-  }
-
-  private async handleEquipmentFailure(event: Event) {
-    log.error({ event }, 'Equipment failure detected');
-    
-    // Emergency response
-    this.emit('emergency:response', {
-      equipment: event.data.equipment,
-      severity: event.data.severity,
-      actions: ['shutdown', 'notify', 'dispatch_maintenance'],
-    });
-  }
-
-  private async handleQualityAlert(event: Event) {
-    log.warn({ event }, 'Quality alert received');
-    
-    // Quality control workflow
-    this.emit('quality:workflow', {
-      batch: event.data.batch,
-      parameters: event.data.parameters,
-      actions: ['isolate', 'retest', 'investigate'],
-    });
-  }
-
-  private async handleProcurementRequest(event: Event) {
-    log.info({ event }, 'Processing procurement request');
-    
-    // Automated procurement
-    this.emit('procurement:auto', {
-      items: event.data.items,
-      urgency: event.data.urgency,
-      actions: ['check_inventory', 'find_vendors', 'create_rfq'],
-    });
-  }
-
-  async close() {
-    if (this.redis) {
-      this.redis.disconnect();
+  async cleanup() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
     }
-    if (this.redisSubscriber) {
-      this.redisSubscriber.disconnect();
-    }
+    await this.prisma.$disconnect();
+    log.info('Event bus cleaned up');
   }
 }

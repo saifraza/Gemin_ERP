@@ -3,35 +3,17 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { WebSocketServer } from 'ws';
-import Redis from 'ioredis';
 import pino from 'pino';
 import { jwtVerify } from 'jose';
+import { PrismaClient } from '@prisma/client';
+import { PostgreSQLCache, PostgreSQLRateLimiter } from '@modern-erp/shared/cache';
 
 const log = pino({ name: 'api-gateway' });
 
-// Initialize Redis with lazy connection
-let redis: Redis | null = null;
-
-async function getRedis(): Promise<Redis> {
-  if (!redis) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new Error('REDIS_URL is required');
-    }
-    
-    redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => {
-        if (times > 10) return null;
-        return Math.min(times * 50, 2000);
-      }
-    });
-    
-    redis.on('error', (err) => log.error('Redis error:', err.message));
-    redis.on('connect', () => log.info('Redis connected'));
-  }
-  return redis;
-}
+// Initialize Prisma and PostgreSQL cache
+const prisma = new PrismaClient();
+const cache = new PostgreSQLCache(prisma);
+const rateLimiter = new PostgreSQLRateLimiter(cache);
 
 // Service URLs
 const services = {
@@ -58,29 +40,24 @@ app.use('*', cors({
 app.use('*', logger());
 
 // Rate limiting middleware
-const rateLimiter = async (c: any, next: any) => {
+const rateLimiterMiddleware = async (c: any, next: any) => {
+  const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+  
   try {
-    const redisClient = await getRedis();
-    const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
-    const key = `rate:${ip}`;
+    const allowed = await rateLimiter.isAllowed(ip, 100, 60); // 100 requests per minute
     
-    const count = await redisClient.incr(key);
-    if (count === 1) {
-      await redisClient.expire(key, 60); // 1 minute window
-    }
-    
-    if (count > 100) { // 100 requests per minute
+    if (!allowed) {
       return c.json({ error: 'Rate limit exceeded' }, 429);
     }
   } catch (error) {
     log.warn('Rate limiting unavailable:', error.message);
-    // Continue without rate limiting if Redis is down
+    // Continue without rate limiting if cache is down
   }
   
   await next();
 };
 
-app.use('/api/*', rateLimiter);
+app.use('/api/*', rateLimiterMiddleware);
 
 // Authentication middleware
 const authMiddleware = async (c: any, next: any) => {
@@ -98,14 +75,13 @@ const authMiddleware = async (c: any, next: any) => {
   try {
     // Try to check cache first
     try {
-      const redisClient = await getRedis();
-      const cached = await redisClient.get(`session:${token}`);
+      const cached = await cache.get(`session:${token}`);
       if (cached) {
-        c.set('user', JSON.parse(cached));
+        c.set('user', cached);
         return next();
       }
     } catch (error) {
-      log.warn('Redis cache unavailable:', error.message);
+      log.warn('Cache unavailable:', error.message);
     }
     
     // Verify JWT
@@ -114,8 +90,7 @@ const authMiddleware = async (c: any, next: any) => {
     
     // Try to cache for future requests
     try {
-      const redisClient = await getRedis();
-      await redisClient.setex(`session:${token}`, 3600, JSON.stringify(payload));
+      await cache.set(`session:${token}`, payload, 3600);
     } catch (error) {
       log.warn('Failed to cache session:', error.message);
     }
@@ -142,186 +117,236 @@ app.get('/health', async (c) => {
     status: 'healthy',
     service: 'api-gateway',
     timestamp: new Date().toISOString(),
-    redis: 'unknown',
+    cache: 'unknown',
+    database: 'unknown',
     services: {},
   };
   
-  // Check Redis
+  // Check database
   try {
-    const redisClient = await getRedis();
-    await redisClient.ping();
-    health.redis = 'connected';
+    await prisma.$queryRaw`SELECT 1`;
+    health.database = 'connected';
   } catch (error) {
-    health.redis = 'disconnected';
-    // Don't fail health check if Redis is down
+    health.database = 'error';
+    health.status = 'degraded';
   }
   
-  // Check each service (don't wait too long)
-  const serviceChecks = Object.entries(services).map(async ([name, url]) => {
+  // Check cache
+  try {
+    await cache.set('health:check', Date.now(), 60);
+    const testValue = await cache.get('health:check');
+    health.cache = testValue ? 'connected' : 'error';
+  } catch (error) {
+    health.cache = 'disconnected';
+    // Don't fail health check if cache is down
+  }
+  
+  // Check downstream services
+  for (const [name, url] of Object.entries(services)) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
-      
-      const res = await fetch(`${url}/health`, { 
-        signal: controller.signal,
-        headers: { 'User-Agent': 'api-gateway-health-check' }
-      });
-      
-      clearTimeout(timeout);
-      health.services[name] = res.ok ? 'healthy' : 'unhealthy';
+      const response = await fetch(`${url}/health`);
+      health.services[name] = response.ok ? 'healthy' : 'unhealthy';
     } catch {
       health.services[name] = 'unreachable';
     }
+  }
+  
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  return c.json(health, statusCode);
+});
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({ 
+    message: 'API Gateway is running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    services: Object.keys(services)
   });
-  
-  await Promise.all(serviceChecks);
-  
-  return c.json(health);
 });
 
-// WebSocket endpoint
-app.get('/ws', (c) => {
-  return c.text('WebSocket endpoint. Connect using ws:// protocol.', 426);
-});
-
-// Proxy routes
+// Forward auth routes
 app.all('/api/auth/*', async (c) => {
   const path = c.req.path.replace('/api/auth', '');
-  const res = await fetch(`${services.core}/api/auth${path}`, {
-    method: c.req.method,
-    headers: c.req.header(),
-    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
-  });
-  
-  return new Response(res.body, {
-    status: res.status,
-    headers: res.headers,
-  });
-});
-
-app.all('/api/core/*', async (c) => {
-  const path = c.req.path.replace('/api/core', '');
-  const res = await fetch(`${services.core}${path}`, {
-    method: c.req.method,
-    headers: c.req.header(),
-    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
-  });
-  
-  return new Response(res.body, {
-    status: res.status,
-    headers: res.headers,
-  });
-});
-
-app.all('/api/mcp/*', async (c) => {
-  const path = c.req.path.replace('/api/mcp', '');
-  const res = await fetch(`${services.mcp}/api/mcp${path}`, {
-    method: c.req.method,
-    headers: c.req.header(),
-    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
-  });
-  
-  return new Response(res.body, {
-    status: res.status,
-    headers: res.headers,
-  });
-});
-
-app.all('/api/factory/*', async (c) => {
-  const path = c.req.path.replace('/api/factory', '');
-  const res = await fetch(`${services.factory}/api${path}`, {
-    method: c.req.method,
-    headers: c.req.header(),
-    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
-  });
-  
-  return new Response(res.body, {
-    status: res.status,
-    headers: res.headers,
-  });
-});
-
-// WebSocket handling for real-time connections
-function setupWebSocketServer() {
-  if (!server) return;
-  
-  wss = new WebSocketServer({ server });
-  
-  wss.on('connection', async (ws, req) => {
-  log.info('New WebSocket connection');
-  
-  // Authenticate WebSocket
-  const token = new URL(req.url!, `http://${req.headers.host}`).searchParams.get('token');
-  if (!token) {
-    ws.close(1008, 'Unauthorized');
-    return;
-  }
+  const url = `${services.core}/api/auth${path}`;
   
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const response = await fetch(url, {
+      method: c.req.method,
+      headers: Object.fromEntries(c.req.raw.headers),
+      body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+    });
     
-    let sub: Redis | null = null;
+    const data = await response.text();
+    return new Response(data, {
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+    });
+  } catch (error) {
+    log.error('Auth forward failed:', error);
+    return c.json({ error: 'Service unavailable' }, 503);
+  }
+});
+
+// Forward other routes
+app.all('/api/*', async (c) => {
+  const path = c.req.path.replace('/api', '');
+  
+  // Determine which service to forward to
+  let serviceUrl = services.core;
+  if (path.startsWith('/mcp')) {
+    serviceUrl = services.mcp;
+  } else if (path.startsWith('/factory')) {
+    serviceUrl = services.factory;
+  } else if (path.startsWith('/analytics')) {
+    serviceUrl = services.analytics;
+  }
+  
+  const url = `${serviceUrl}/api${path}`;
+  const user = c.get('user');
+  
+  try {
+    const headers = Object.fromEntries(c.req.raw.headers);
+    headers['x-user-id'] = user?.userId;
+    headers['x-user-role'] = user?.role;
+    headers['x-company-id'] = user?.companyId;
     
-    // Try to subscribe to user-specific channels
-    try {
-      const redisClient = await getRedis();
-      sub = redisClient.duplicate();
-      await sub.subscribe(`user:${payload.userId}`, `company:${payload.companyId}`);
-      
-      sub.on('message', (channel, message) => {
-        ws.send(JSON.stringify({ channel, data: JSON.parse(message) }));
-      });
-    } catch (error) {
-      log.warn('WebSocket Redis subscription failed:', error.message);
-      // Continue without Redis pub/sub
+    const response = await fetch(url, {
+      method: c.req.method,
+      headers,
+      body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+    });
+    
+    const data = await response.text();
+    return new Response(data, {
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+    });
+  } catch (error) {
+    log.error('Service forward failed:', error);
+    return c.json({ error: 'Service unavailable' }, 503);
+  }
+});
+
+// WebSocket setup
+function setupWebSocketServer() {
+  wss = new WebSocketServer({ server: server, path: '/ws' });
+  
+  wss.on('connection', async (ws, req) => {
+    const token = new URL(req.url!, `http://${req.headers.host}`).searchParams.get('token');
+    
+    if (!token) {
+      ws.close(1008, 'Unauthorized');
+      return;
     }
     
-    ws.on('close', () => {
-      if (sub) {
-        sub.disconnect();
-      }
-    });
-    
-    // Handle incoming messages
-    ws.on('message', async (data) => {
-      try {
-        const message = JSON.parse(data.toString());
+    try {
+      const { payload } = await jwtVerify(token, secret);
+      
+      // Store connection info in database for event delivery
+      const connectionId = `ws:${Date.now()}:${Math.random()}`;
+      await prisma.event.create({
+        data: {
+          type: 'websocket.connected',
+          source: 'api-gateway',
+          data: {
+            connectionId,
+            userId: payload.userId,
+            companyId: payload.companyId,
+          },
+          metadata: {
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+      
+      // Poll for events periodically instead of using Redis pub/sub
+      const pollInterval = setInterval(async () => {
+        try {
+          // Get recent events for this user
+          const events = await prisma.event.findMany({
+            where: {
+              createdAt: { gte: new Date(Date.now() - 5000) }, // Last 5 seconds
+              OR: [
+                { data: { path: ['userId'], equals: payload.userId } },
+                { data: { path: ['companyId'], equals: payload.companyId } },
+              ],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          });
+          
+          for (const event of events) {
+            ws.send(JSON.stringify({
+              type: event.type,
+              data: event.data,
+              timestamp: event.createdAt,
+            }));
+          }
+        } catch (error) {
+          log.error('Event polling error:', error);
+        }
+      }, 1000); // Poll every second
+      
+      ws.on('close', async () => {
+        clearInterval(pollInterval);
         
-        // Route to appropriate service
-        switch (message.type) {
-          case 'mcp':
-            // Forward to MCP service
-            try {
-              const redisClient = await getRedis();
-              await redisClient.publish('mcp:requests', JSON.stringify({
+        // Record disconnection
+        await prisma.event.create({
+          data: {
+            type: 'websocket.disconnected',
+            source: 'api-gateway',
+            data: { connectionId },
+            metadata: {
+              timestamp: new Date().toISOString(),
+            },
+          },
+        }).catch(() => {}); // Ignore errors on cleanup
+      });
+      
+      // Handle incoming messages
+      ws.on('message', async (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          
+          // Create event for message processing
+          await prisma.event.create({
+            data: {
+              type: `websocket.message.${message.type}`,
+              source: 'api-gateway',
+              data: {
                 ...message,
                 userId: payload.userId,
-              }));
-            } catch (error) {
-              log.warn('Failed to publish to Redis:', error.message);
-              // Could forward directly to MCP service via HTTP as fallback
-            }
-            break;
-            
-          case 'subscribe':
-            // Subscribe to additional channels
-            if (message.channels && sub) {
-              await sub.subscribe(...message.channels);
-            }
-            break;
+                connectionId,
+              },
+              metadata: {
+                timestamp: new Date().toISOString(),
+              },
+            },
+          });
+          
+          // Acknowledge receipt
+          ws.send(JSON.stringify({
+            type: 'ack',
+            messageId: message.id,
+          }));
+        } catch (error) {
+          log.error('WebSocket message error:', error);
         }
-      } catch (error) {
-        log.error(error, 'WebSocket message error');
-      }
-    });
-  } catch {
-    ws.close(1008, 'Invalid token');
-  }
+      });
+    } catch (error) {
+      log.error('WebSocket auth failed:', error);
+      ws.close(1008, 'Unauthorized');
+    }
   });
+  
+  log.info('WebSocket server initialized');
 }
 
 // Start server
-const port = parseInt(process.env.PORT || '8080');
+const port = parseInt(process.env.PORT || '4000');
+log.info(`Starting API Gateway on port ${port}`);
+
 server = serve({
   fetch: app.fetch,
   port,
@@ -334,9 +359,7 @@ server = serve({
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   log.info('Shutting down gracefully...');
-  if (redis) {
-    redis.disconnect();
-  }
+  await prisma.$disconnect();
   if (wss) {
     wss.close();
   }

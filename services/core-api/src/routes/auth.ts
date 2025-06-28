@@ -3,7 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
-import { prisma, redis } from '../index.js';
+import { prisma, cache } from '../index.js';
+import { PostgreSQLSessionStore } from '@modern-erp/shared/cache';
 
 const authRoutes = new Hono();
 
@@ -12,7 +13,8 @@ authRoutes.get('/health', (c) => {
   return c.json({ 
     status: 'ok', 
     message: 'Auth routes are loaded',
-    endpoints: ['/login', '/register', '/test-register', '/verify', '/logout']
+    endpoints: ['/login', '/register', '/test-register', '/verify', '/logout'],
+    cache: 'PostgreSQL'
   });
 });
 
@@ -79,18 +81,16 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
     },
   });
   
-  // Cache session if Redis is available
-  const redisClient = redis();
-  if (redisClient) {
-    try {
-      await redisClient.setex(`session:${token}`, 86400, JSON.stringify({
-        userId: user.id,
-        role: user.role,
-        companyId: user.companyId,
-      }));
-    } catch (error) {
-      console.error('Failed to cache session:', error);
-    }
+  // Cache session using PostgreSQL
+  const sessionStore = new PostgreSQLSessionStore(cache);
+  try {
+    await sessionStore.set(token, {
+      userId: user.id,
+      role: user.role,
+      companyId: user.companyId,
+    }, 86400); // 24 hours
+  } catch (error) {
+    console.error('Failed to cache session:', error);
   }
   
   // Log activity
@@ -172,17 +172,15 @@ authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
 // Verify token middleware
 export async function verifyToken(token: string) {
   try {
-    // Check cache first if Redis is available
-    const redisClient = redis();
-    if (redisClient) {
-      try {
-        const cached = await redisClient.get(`session:${token}`);
-        if (cached) {
-          return JSON.parse(cached);
-        }
-      } catch (error) {
-        console.error('Redis get error:', error);
+    // Check cache first
+    const sessionStore = new PostgreSQLSessionStore(cache);
+    try {
+      const cached = await sessionStore.get(token);
+      if (cached) {
+        return cached;
       }
+    } catch (error) {
+      console.error('Cache get error:', error);
     }
     
     // Verify JWT
@@ -198,17 +196,15 @@ export async function verifyToken(token: string) {
       return null;
     }
     
-    // Cache for future requests if Redis is available
-    if (redisClient) {
-      try {
-        await redisClient.setex(`session:${token}`, 3600, JSON.stringify({
-          userId: payload.userId,
-          role: payload.role,
-          companyId: payload.companyId,
-        }));
-      } catch (error) {
-        console.error('Failed to cache session:', error);
-      }
+    // Cache for future requests
+    try {
+      await sessionStore.set(token, {
+        userId: payload.userId,
+        role: payload.role,
+        companyId: payload.companyId,
+      }, 3600);
+    } catch (error) {
+      console.error('Failed to cache session:', error);
     }
     
     return payload;
@@ -244,14 +240,12 @@ authRoutes.post('/logout', async (c) => {
       where: { token },
     }).catch(() => {}); // Ignore if not found
     
-    // Remove from cache if Redis is available
-    const redisClient = redis();
-    if (redisClient) {
-      try {
-        await redisClient.del(`session:${token}`);
-      } catch (error) {
-        console.error('Failed to delete session from cache:', error);
-      }
+    // Remove from cache
+    const sessionStore = new PostgreSQLSessionStore(cache);
+    try {
+      await sessionStore.destroy(token);
+    } catch (error) {
+      console.error('Failed to delete session from cache:', error);
     }
   }
   

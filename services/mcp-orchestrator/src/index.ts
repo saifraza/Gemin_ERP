@@ -115,6 +115,9 @@ process.on('SIGTERM', async () => {
     wss.close();
   }
   
+  // Cleanup event bus
+  await eventBus.cleanup();
+  
   log.info('Shutdown complete');
   process.exit(0);
 });

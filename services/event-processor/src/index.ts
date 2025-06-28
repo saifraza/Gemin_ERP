@@ -2,238 +2,295 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { Queue, Worker } from 'bullmq';
-import Redis from 'ioredis';
 import cron from 'node-cron';
 import pino from 'pino';
 import { PrismaClient } from '@prisma/client';
+import { PostgreSQLCache } from '@modern-erp/shared/cache';
 
 const log = pino({ name: 'event-processor' });
 
 // Initialize services
 const app = new Hono();
 const prisma = new PrismaClient();
+const cache = new PostgreSQLCache(prisma);
 
-// Redis connection with error handling
-let redis: Redis | null = null;
-let eventQueue: Queue | null = null;
+// Event processing queue (in-memory)
+const eventQueue: any[] = [];
+let processing = false;
 
-async function initializeRedis() {
+// Process events from database instead of Redis
+async function processEventQueue() {
+  if (processing) return;
+  processing = true;
+
   try {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      log.warn('No Redis URL provided, running without queue processing');
-      return;
-    }
-
-    redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => Math.min(times * 50, 2000),
-    });
-
-    redis.on('error', (err) => {
-      log.error({ error: err }, 'Redis connection error');
-    });
-
-    redis.on('connect', () => {
-      log.info('Connected to Redis');
-    });
-
-    // Initialize BullMQ queue
-    eventQueue = new Queue('events', { connection: redis });
-    
-    // Initialize worker
-    const worker = new Worker(
-      'events',
-      async (job) => {
-        log.info({ job: job.data }, 'Processing event');
-        await processEvent(job.data);
+    // Get unprocessed events from database
+    const events = await prisma.event.findMany({
+      where: {
+        metadata: {
+          path: ['processed'],
+          equals: false,
+        },
       },
-      { connection: redis }
-    );
-
-    worker.on('completed', (job) => {
-      log.info({ jobId: job.id }, 'Job completed');
+      orderBy: { createdAt: 'asc' },
+      take: 10,
     });
 
-    worker.on('failed', (job, err) => {
-      log.error({ jobId: job?.id, error: err }, 'Job failed');
-    });
-
+    for (const event of events) {
+      try {
+        await processEvent(event);
+        
+        // Mark as processed
+        await prisma.event.update({
+          where: { id: event.id },
+          data: {
+            metadata: {
+              ...event.metadata,
+              processed: true,
+              processedAt: new Date().toISOString(),
+            },
+          },
+        });
+      } catch (error) {
+        log.error({ error, eventId: event.id }, 'Failed to process event');
+      }
+    }
   } catch (error) {
-    log.error({ error }, 'Failed to initialize Redis');
+    log.error({ error }, 'Event queue processing error');
+  } finally {
+    processing = false;
   }
 }
 
-// Event processing logic
+// Process individual event
 async function processEvent(event: any) {
-  try {
-    // Store event in database
-    await prisma.event.create({
-      data: {
-        type: event.type,
-        source: event.source,
-        data: event.data,
-        metadata: event.metadata || {},
-      },
-    });
+  log.info({ eventType: event.type, eventId: event.id }, 'Processing event');
 
-    // Process based on event type
-    switch (event.type) {
-      case 'user.registered':
-        await handleUserRegistered(event);
-        break;
-      case 'production.completed':
-        await handleProductionCompleted(event);
-        break;
-      case 'inventory.low':
-        await handleLowInventory(event);
-        break;
-      case 'maintenance.due':
-        await handleMaintenanceDue(event);
-        break;
-      default:
-        log.info({ event }, 'Unhandled event type');
-    }
-  } catch (error) {
-    log.error({ error, event }, 'Failed to process event');
-    throw error;
+  switch (event.type) {
+    case 'user.created':
+      await handleUserCreated(event);
+      break;
+    case 'order.placed':
+      await handleOrderPlaced(event);
+      break;
+    case 'inventory.low':
+      await handleLowInventory(event);
+      break;
+    default:
+      log.warn({ eventType: event.type }, 'Unknown event type');
   }
 }
 
 // Event handlers
-async function handleUserRegistered(event: any) {
-  log.info({ userId: event.data.userId }, 'Processing user registration');
-  // Send welcome email, setup default permissions, etc.
+async function handleUserCreated(event: any) {
+  const { userId, email, name } = event.data;
+  log.info({ userId }, 'Handling user created event');
+  
+  // Send welcome email, create default settings, etc.
+  // This is where you'd integrate with email service, etc.
 }
 
-async function handleProductionCompleted(event: any) {
-  log.info({ batchId: event.data.batchId }, 'Processing production completion');
-  // Update inventory, generate reports, etc.
+async function handleOrderPlaced(event: any) {
+  const { orderId, userId, items } = event.data;
+  log.info({ orderId }, 'Handling order placed event');
+  
+  // Update inventory, send confirmation, etc.
 }
 
 async function handleLowInventory(event: any) {
-  log.warn({ item: event.data.item }, 'Processing low inventory alert');
-  // Create procurement request, notify managers, etc.
-}
-
-async function handleMaintenanceDue(event: any) {
-  log.info({ equipment: event.data.equipment }, 'Processing maintenance due');
-  // Schedule maintenance, notify technicians, etc.
-}
-
-// Scheduled jobs
-function initializeScheduledJobs() {
-  // Daily production report at 6 AM
-  cron.schedule('0 6 * * *', async () => {
-    log.info('Running daily production report');
-    try {
-      // Generate and send daily reports
-    } catch (error) {
-      log.error({ error }, 'Failed to generate daily report');
-    }
-  });
-
-  // Hourly inventory check
-  cron.schedule('0 * * * *', async () => {
-    log.info('Running hourly inventory check');
-    try {
-      // Check inventory levels and create alerts
-    } catch (error) {
-      log.error({ error }, 'Failed to check inventory');
-    }
-  });
-
-  // Equipment maintenance check every 4 hours
-  cron.schedule('0 */4 * * *', async () => {
-    log.info('Running equipment maintenance check');
-    try {
-      // Check equipment status and maintenance schedules
-    } catch (error) {
-      log.error({ error }, 'Failed to check equipment maintenance');
-    }
-  });
+  const { productId, currentStock, threshold } = event.data;
+  log.info({ productId }, 'Handling low inventory event');
+  
+  // Send alerts, create purchase orders, etc.
 }
 
 // Middleware
 app.use('*', cors());
 app.use('*', logger());
 
-// Routes
-app.get('/health', (c) => {
-  return c.json({ 
+// Health check
+app.get('/health', async (c) => {
+  const health = {
     status: 'healthy',
     service: 'event-processor',
-    redis: redis?.status || 'disconnected',
-    queue: eventQueue ? 'active' : 'inactive',
-  });
+    timestamp: new Date().toISOString(),
+    database: 'unknown',
+    cache: 'unknown',
+    jobs: {
+      eventProcessing: processing ? 'running' : 'idle',
+      cacheCleanup: 'scheduled',
+    },
+  };
+
+  // Check database
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    health.database = 'connected';
+  } catch {
+    health.database = 'error';
+    health.status = 'degraded';
+  }
+
+  // Check cache
+  try {
+    await cache.set('health:check', Date.now(), 60);
+    const value = await cache.get('health:check');
+    health.cache = value ? 'connected' : 'error';
+  } catch {
+    health.cache = 'error';
+  }
+
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  return c.json(health, statusCode);
 });
 
-// Queue event endpoint
-app.post('/events', async (c) => {
+// API endpoints
+app.post('/api/events', async (c) => {
   try {
     const event = await c.req.json();
     
-    if (eventQueue) {
-      await eventQueue.add('process-event', event);
-      return c.json({ success: true, message: 'Event queued' });
-    } else {
-      // Process immediately if no queue
-      await processEvent(event);
-      return c.json({ success: true, message: 'Event processed' });
-    }
-  } catch (error) {
-    log.error({ error }, 'Failed to queue event');
-    return c.json({ error: 'Failed to process event' }, 500);
-  }
-});
-
-// Get event stats
-app.get('/stats', async (c) => {
-  try {
-    const stats = await prisma.event.groupBy({
-      by: ['type'],
-      _count: true,
-      orderBy: {
-        _count: {
-          type: 'desc',
+    // Store event in database
+    const created = await prisma.event.create({
+      data: {
+        type: event.type,
+        source: event.source || 'api',
+        data: event.data,
+        metadata: {
+          ...event.metadata,
+          processed: false,
         },
       },
     });
-    
-    return c.json({ stats });
+
+    // Trigger processing
+    setImmediate(() => processEventQueue());
+
+    return c.json({ id: created.id, status: 'queued' });
   } catch (error) {
-    return c.json({ error: 'Failed to get stats' }, 500);
+    log.error({ error }, 'Failed to queue event');
+    return c.json({ error: 'Failed to queue event' }, 500);
   }
 });
 
+app.get('/api/events', async (c) => {
+  const limit = parseInt(c.req.query('limit') || '100');
+  const type = c.req.query('type');
+
+  const where: any = {};
+  if (type) {
+    where.type = type;
+  }
+
+  const events = await prisma.event.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+
+  return c.json(events);
+});
+
+// Scheduled jobs
+function setupScheduledJobs() {
+  // Process event queue every 5 seconds
+  cron.schedule('*/5 * * * * *', () => {
+    processEventQueue().catch(error => {
+      log.error({ error }, 'Scheduled event processing failed');
+    });
+  });
+
+  // Cleanup old events daily at 2 AM
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      const result = await prisma.event.deleteMany({
+        where: {
+          createdAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // 30 days old
+          metadata: { path: ['processed'], equals: true },
+        },
+      });
+      log.info({ deleted: result.count }, 'Cleaned up old events');
+    } catch (error) {
+      log.error({ error }, 'Event cleanup failed');
+    }
+  });
+
+  // Cache cleanup every hour
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const deleted = await cache.cleanup();
+      log.info({ deleted }, 'Cleaned up expired cache entries');
+    } catch (error) {
+      log.error({ error }, 'Cache cleanup failed');
+    }
+  });
+
+  // Generate analytics reports daily at 3 AM
+  cron.schedule('0 3 * * *', async () => {
+    try {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const eventCounts = await prisma.event.groupBy({
+        by: ['type'],
+        where: {
+          createdAt: {
+            gte: yesterday,
+            lt: today,
+          },
+        },
+        _count: true,
+      });
+
+      await prisma.event.create({
+        data: {
+          type: 'analytics.daily_report',
+          source: 'event-processor',
+          data: {
+            date: yesterday.toISOString().split('T')[0],
+            eventCounts: eventCounts.map(ec => ({
+              type: ec.type,
+              count: ec._count,
+            })),
+          },
+          metadata: { processed: true },
+        },
+      });
+
+      log.info('Daily analytics report generated');
+    } catch (error) {
+      log.error({ error }, 'Analytics report generation failed');
+    }
+  });
+
+  log.info('Scheduled jobs initialized');
+}
+
 // Start server
-const PORT = process.env.PORT || 3003;
+const port = parseInt(process.env.PORT || '3006');
 
 serve({
   fetch: app.fetch,
-  port: Number(PORT),
-  hostname: '0.0.0.0', // Important for Railway!
-}, () => {
-  log.info(`Event Processor running on http://0.0.0.0:${PORT}`);
+  port,
+  hostname: '0.0.0.0',
+}, (info) => {
+  log.info(`Event Processor running on http://0.0.0.0:${info.port}`);
   
-  // Initialize services
-  initializeRedis();
-  initializeScheduledJobs();
+  // Setup scheduled jobs after server starts
+  setupScheduledJobs();
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  log.info('SIGTERM received, shutting down gracefully');
+  log.info('Shutting down gracefully...');
   
-  if (eventQueue) {
-    await eventQueue.close();
-  }
+  // Stop cron jobs
+  cron.getTasks().forEach(task => task.stop());
   
-  if (redis) {
-    redis.disconnect();
-  }
-  
+  // Disconnect from database
   await prisma.$disconnect();
   
   process.exit(0);
