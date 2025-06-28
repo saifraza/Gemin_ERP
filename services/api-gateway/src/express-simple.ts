@@ -17,13 +17,21 @@ const ensureProtocol = (url: string | undefined) => {
 };
 
 // Service URLs - Use environment variables provided by Railway
+// Temporary: Use public URLs if internal networking fails
 const services = {
-  core: ensureProtocol(process.env.CORE_API_URL),
+  core: ensureProtocol(process.env.CORE_API_URL) || 
+    (process.env.RAILWAY_ENVIRONMENT === 'production' ? 'https://core-api-production-76b9.up.railway.app' : undefined),
   mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL),
   eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL),
 };
 
 console.log('Service URLs:', services);
+console.log('Environment:', {
+  RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
+  PORT: process.env.PORT,
+  CORE_API_URL: process.env.CORE_API_URL,
+  NODE_ENV: process.env.NODE_ENV
+});
 
 // Enable CORS for all origins
 app.use(cors({
@@ -50,6 +58,47 @@ app.get('/', (req, res) => {
     message: 'API Gateway is running (Express)',
     timestamp: new Date().toISOString()
   });
+});
+
+// Test direct connection to core-api
+app.get('/test-core-direct', async (req, res) => {
+  const tests = [];
+  
+  // Test different URL formats
+  const urlsToTest = [
+    'http://core-api.railway.internal/health',
+    'http://core-api.railway.internal:80/health',
+    'http://core-api.railway.internal:8080/health',
+    'http://core-api:8080/health',
+    'http://[::1]:8080/health', // IPv6 localhost
+  ];
+  
+  for (const url of urlsToTest) {
+    try {
+      console.log(`Testing: ${url}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        timeout: 3000,
+        signal: AbortSignal.timeout(3000)
+      });
+      tests.push({
+        url,
+        success: true,
+        status: response.status,
+        data: await response.text()
+      });
+    } catch (error: any) {
+      tests.push({
+        url,
+        success: false,
+        error: error.message,
+        code: error.code,
+        errno: error.errno
+      });
+    }
+  }
+  
+  res.json({ tests });
 });
 
 // Test internal connectivity
