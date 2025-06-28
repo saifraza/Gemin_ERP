@@ -1,11 +1,34 @@
 import { Hono } from 'hono';
 import { prisma } from '../index.js';
-import { jwt } from 'hono/jwt';
+import { jwtVerify } from 'jose';
 
 const userRoutes = new Hono();
 
-// Apply JWT middleware to all user routes
-userRoutes.use('*', jwt({ secret: process.env.JWT_SECRET || 'your-secret-key' }));
+// JWT secret (same as auth routes)
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+);
+
+// Custom JWT middleware for jose
+userRoutes.use('*', async (c, next) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'No token provided' }, 401);
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const { payload } = await jwtVerify(token, secret);
+    
+    // Set the payload for use in routes
+    c.set('jwtPayload', payload);
+    
+    await next();
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+});
 
 // Get all users
 userRoutes.get('/', async (c) => {
