@@ -1,43 +1,81 @@
 import { Hono } from 'hono';
 import { prisma } from '../index.js';
+import { jwt } from 'hono/jwt';
 
 const userRoutes = new Hono();
 
+// Apply JWT middleware to all user routes
+userRoutes.use('*', jwt({ secret: process.env.JWT_SECRET || 'your-secret-key' }));
+
 // Get all users
 userRoutes.get('/', async (c) => {
-  // Get user context from JWT
-  const userPayload = c.get('jwtPayload');
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userPayload.id },
-    select: { role: true, companyId: true }
-  });
-  
-  // Super admins can see all users
-  // Regular users can only see users from their company
-  const whereClause = currentUser?.role === 'SUPER_ADMIN' 
-    ? {} 
-    : { companyId: currentUser?.companyId };
-  
-  const users = await prisma.user.findMany({
-    where: whereClause,
-    select: {
-      id: true,
-      email: true,
-      username: true,
-      name: true,
-      role: true,
-      accessLevel: true,
-      isActive: true,
-      company: {
-        select: {
-          id: true,
-          name: true,
+  try {
+    // Get user context from JWT
+    const userPayload = c.get('jwtPayload');
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userPayload.id },
+      select: { id: true, role: true, companyId: true }
+    });
+    
+    if (!currentUser) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    // Super admins can see all users
+    // Regular users can see users from their company
+    const whereClause = currentUser.role === 'SUPER_ADMIN' 
+      ? {} 
+      : { companyId: currentUser.companyId };
+    
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        name: true,
+        role: true,
+        accessLevel: true,
+        isActive: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
-    },
-  });
-  
-  return c.json(users);
+    });
+    
+    // If no users found but user is not SUPER_ADMIN, at least return the current user
+    if (users.length === 0 && currentUser.role !== 'SUPER_ADMIN') {
+      const self = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          name: true,
+          role: true,
+          accessLevel: true,
+          isActive: true,
+          company: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+      if (self) {
+        return c.json([self]);
+      }
+    }
+    
+    return c.json(users);
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    return c.json({ error: 'Failed to fetch users' }, 500);
+  }
 });
 
 // Delete a user
@@ -112,12 +150,25 @@ userRoutes.put('/:id/role', async (c) => {
     const userPayload = c.get('jwtPayload');
     const currentUser = await prisma.user.findUnique({
       where: { id: userPayload.id },
-      select: { role: true }
+      select: { id: true, role: true }
     });
     
-    // Only SUPER_ADMIN can promote others to SUPER_ADMIN
+    // Check if there are any SUPER_ADMINs in the system
+    const superAdminCount = await prisma.user.count({
+      where: { role: 'SUPER_ADMIN' }
+    });
+    
+    // Allow self-promotion to SUPER_ADMIN if:
+    // 1. No SUPER_ADMINs exist in the system
+    // 2. User is promoting themselves
+    // 3. User is already an ADMIN
     if (role === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
-      return c.json({ error: 'Only super admins can create other super admins' }, 403);
+      if (superAdminCount === 0 && id === currentUser.id && currentUser.role === 'ADMIN') {
+        // Allow first SUPER_ADMIN creation
+        console.log('Allowing first SUPER_ADMIN creation for user:', currentUser.id);
+      } else {
+        return c.json({ error: 'Only super admins can create other super admins' }, 403);
+      }
     }
     
     const user = await prisma.user.update({
