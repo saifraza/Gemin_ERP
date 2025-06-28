@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: true,
           companyName: response.user.company?.name || null,
           allowedFactories: response.user.allowedFactories || [],
-          currentFactory: response.user.accessLevel === 'HQ' ? 'all' : 
+          currentFactory: (response.user.accessLevel === 'HQ' || response.user.role === 'SUPER_ADMIN') ? 'all' : 
                          (response.user.allowedFactories?.[0]?.id || 'all'),
         });
 
@@ -101,7 +101,7 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: true,
           companyName: user.company?.name || null,
           allowedFactories: user.allowedFactories || [],
-          currentFactory: user.accessLevel === 'HQ' ? 'all' : 
+          currentFactory: (user.accessLevel === 'HQ' || user.role === 'SUPER_ADMIN') ? 'all' : 
                          (user.allowedFactories?.[0]?.id || 'all'),
         });
       },
@@ -109,6 +109,7 @@ export const useAuthStore = create<AuthStore>()(
       switchFactory: (factoryId: string | 'all') => {
         const state = get();
         if (state.user?.accessLevel === 'HQ' || 
+            state.user?.role === 'SUPER_ADMIN' ||
             factoryId === 'all' ||
             state.allowedFactories.some(f => f.id === factoryId)) {
           set({ currentFactory: factoryId });
@@ -117,7 +118,7 @@ export const useAuthStore = create<AuthStore>()(
 
       canAccessAllFactories: () => {
         const state = get();
-        return state.user?.accessLevel === 'HQ';
+        return state.user?.accessLevel === 'HQ' || state.user?.role === 'SUPER_ADMIN';
       },
     }),
     {

@@ -20,13 +20,13 @@ export function FactorySelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debug logging
-  console.log('Factory Selector Debug:', {
-    user,
-    currentFactory,
-    allowedFactories,
-    canAccessAll: canAccessAllFactories()
-  });
+  // Debug logging (commented out for production)
+  // console.log('Factory Selector Debug:', {
+  //   user,
+  //   currentFactory,
+  //   allowedFactories,
+  //   canAccessAll: canAccessAllFactories()
+  // });
 
   if (!user) {
     return <div className="text-xs text-gray-400">Loading user...</div>;
