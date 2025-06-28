@@ -9,24 +9,46 @@ const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 );
 
+// Health check endpoint (no auth required)
+userRoutes.get('/health', (c) => {
+  return c.json({ 
+    status: 'ok', 
+    service: 'user-routes',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Custom JWT middleware for jose
 userRoutes.use('*', async (c, next) => {
+  // Skip auth for health check
+  if (c.req.path.endsWith('/health')) {
+    return await next();
+  }
+  
   try {
     const authHeader = c.req.header('Authorization');
+    console.log('Auth header:', authHeader ? 'present' : 'missing');
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({ error: 'No token provided' }, 401);
+      return c.json({ error: 'No token provided', path: c.req.path }, 401);
     }
     
     const token = authHeader.split(' ')[1];
     const { payload } = await jwtVerify(token, secret);
     
+    console.log('JWT verified for user:', payload.id);
+    
     // Set the payload for use in routes
     c.set('jwtPayload', payload);
     
     await next();
-  } catch (error) {
-    console.error('JWT verification error:', error);
-    return c.json({ error: 'Invalid token' }, 401);
+  } catch (error: any) {
+    console.error('JWT verification error:', error.message);
+    return c.json({ 
+      error: 'Invalid token', 
+      details: error.message,
+      type: error.name 
+    }, 401);
   }
 });
 

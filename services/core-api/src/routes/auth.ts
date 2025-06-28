@@ -66,7 +66,8 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
   
   // Create JWT with access level
   const token = await new SignJWT({
-    userId: user.id,
+    id: user.id, // Changed from userId to id
+    userId: user.id, // Keep for backward compatibility
     email: user.email,
     role: user.role,
     companyId: user.companyId,
