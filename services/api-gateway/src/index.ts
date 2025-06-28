@@ -11,21 +11,24 @@ import { PostgreSQLCache, PostgreSQLRateLimiter } from './shared/cache/index.js'
 const log = pino({ name: 'api-gateway' });
 
 // Initialize Prisma and PostgreSQL cache
-const prisma = new PrismaClient();
-const cache = new PostgreSQLCache(prisma);
-const rateLimiter = new PostgreSQLRateLimiter(cache);
+let prisma: PrismaClient | null = null;
+let cache: PostgreSQLCache | null = null;
+let rateLimiter: PostgreSQLRateLimiter | null = null;
 
 // Initialize database connection lazily
 let dbConnected = false;
 async function ensureDbConnection() {
-  if (!dbConnected) {
+  if (!dbConnected && process.env.DATABASE_URL) {
     try {
+      prisma = new PrismaClient();
       await prisma.$connect();
+      cache = new PostgreSQLCache(prisma);
+      rateLimiter = new PostgreSQLRateLimiter(cache);
       dbConnected = true;
       log.info('Database connected');
     } catch (error) {
       log.error('Database connection failed:', error);
-      throw error;
+      // Don't throw - allow gateway to work without database
     }
   }
 }
@@ -48,6 +51,15 @@ log.info({
 const app = new Hono();
 let server: any; // Will be set when server starts
 let wss: WebSocketServer;
+
+// Global error handler
+app.onError((err, c) => {
+  log.error({ error: err.message, stack: err.stack }, 'Unhandled error');
+  return c.json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  }, 500);
+});
 
 // JWT secret
 const secret = new TextEncoder().encode(
@@ -79,29 +91,7 @@ const getAllowedOrigins = () => {
 
 // Middleware
 app.use('*', cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = getAllowedOrigins();
-    
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) {
-      callback(null, true);
-      return;
-    }
-    
-    // Check if origin is allowed
-    if (allowedOrigins.some(allowed => {
-      if (allowed.includes('*')) {
-        // Handle wildcard domains
-        const pattern = allowed.replace(/\*/g, '.*');
-        return new RegExp(pattern).test(origin);
-      }
-      return allowed === origin;
-    })) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: getAllowedOrigins(),
   credentials: true,
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -110,6 +100,11 @@ app.use('*', logger());
 
 // Rate limiting middleware
 const rateLimiterMiddleware = async (c: any, next: any) => {
+  if (!rateLimiter) {
+    // No rate limiting without database
+    return next();
+  }
+  
   const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
   
   try {
@@ -143,14 +138,16 @@ const authMiddleware = async (c: any, next: any) => {
   
   try {
     // Try to check cache first
-    try {
-      const cached = await cache.get(`session:${token}`);
-      if (cached) {
-        c.set('user', cached);
-        return next();
+    if (cache) {
+      try {
+        const cached = await cache.get(`session:${token}`);
+        if (cached) {
+          c.set('user', cached);
+          return next();
+        }
+      } catch (error) {
+        log.warn('Cache unavailable:', error.message);
       }
-    } catch (error) {
-      log.warn('Cache unavailable:', error.message);
     }
     
     // Verify JWT
@@ -158,10 +155,12 @@ const authMiddleware = async (c: any, next: any) => {
     c.set('user', payload);
     
     // Try to cache for future requests
-    try {
-      await cache.set(`session:${token}`, payload, 3600);
-    } catch (error) {
-      log.warn('Failed to cache session:', error.message);
+    if (cache) {
+      try {
+        await cache.set(`session:${token}`, payload, 3600);
+      } catch (error) {
+        log.warn('Failed to cache session:', error.message);
+      }
     }
     
     await next();
@@ -182,52 +181,82 @@ app.use('/api/*', async (c, next) => {
 
 // Health check
 app.get('/health', async (c) => {
-  const health = {
-    status: 'healthy',
-    service: 'api-gateway',
-    timestamp: new Date().toISOString(),
-    cache: 'unknown',
-    database: 'unknown',
-    services: {},
-  };
-  
-  // Check database
-  if (!process.env.DATABASE_URL) {
-    health.database = 'not_configured';
-    // Don't fail health check if database is not configured
-  } else {
-    try {
-      await ensureDbConnection();
-      await prisma.$queryRaw`SELECT 1`;
-      health.database = 'connected';
-    } catch (error) {
-      health.database = 'error';
-      health.status = 'degraded';
-    }
-  }
-  
-  // Check cache
   try {
-    await cache.set('health:check', Date.now(), 60);
-    const testValue = await cache.get('health:check');
-    health.cache = testValue ? 'connected' : 'error';
-  } catch (error) {
-    health.cache = 'disconnected';
-    // Don't fail health check if cache is down
-  }
-  
-  // Check downstream services
-  for (const [name, url] of Object.entries(services)) {
-    try {
-      const response = await fetch(`${url}/health`);
-      health.services[name] = response.ok ? 'healthy' : 'unhealthy';
-    } catch {
-      health.services[name] = 'unreachable';
+    const health = {
+      status: 'healthy',
+      service: 'api-gateway',
+      timestamp: new Date().toISOString(),
+      cache: 'unknown',
+      database: 'unknown',
+      services: {},
+    };
+    
+    // Check database
+    if (!process.env.DATABASE_URL) {
+      health.database = 'not_configured';
+      health.cache = 'not_configured';
+      // Don't fail health check if database is not configured
+    } else {
+      try {
+        await ensureDbConnection();
+        if (prisma) {
+          await prisma.$queryRaw`SELECT 1`;
+          health.database = 'connected';
+        } else {
+          health.database = 'initialization_failed';
+        }
+      } catch (error) {
+        health.database = 'error';
+        health.status = 'degraded';
+        log.error({ error: error.message }, 'Database health check failed');
+      }
     }
+    
+    // Check cache
+    if (cache) {
+      try {
+        await cache.set('health:check', Date.now(), 60);
+        const testValue = await cache.get('health:check');
+        health.cache = testValue ? 'connected' : 'error';
+      } catch (error) {
+        health.cache = 'disconnected';
+        log.error({ error: error.message }, 'Cache health check failed');
+      }
+    }
+    
+    // Check downstream services - but don't let failures crash health check
+    try {
+      for (const [name, url] of Object.entries(services)) {
+        try {
+          // Create timeout with controller for older Node versions
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          const response = await fetch(`${url}/health`, { 
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          health.services[name] = response.ok ? 'healthy' : 'unhealthy';
+        } catch (error) {
+          health.services[name] = 'unreachable';
+        }
+      }
+    } catch (error) {
+      log.error({ error: error.message }, 'Service health check error');
+    }
+    
+    const statusCode = health.status === 'healthy' ? 200 : 503;
+    return c.json(health, statusCode);
+  } catch (error) {
+    log.error({ error: error.message, stack: error.stack }, 'Health check crashed');
+    return c.json({ 
+      status: 'error', 
+      service: 'api-gateway',
+      message: 'Health check failed',
+      timestamp: new Date().toISOString()
+    }, 500);
   }
-  
-  const statusCode = health.status === 'healthy' ? 200 : 503;
-  return c.json(health, statusCode);
 });
 
 // Root endpoint
@@ -320,63 +349,78 @@ function setupWebSocketServer() {
       
       // Store connection info in database for event delivery
       const connectionId = `ws:${Date.now()}:${Math.random()}`;
-      await prisma.event.create({
-        data: {
-          type: 'websocket.connected',
-          source: 'api-gateway',
-          data: {
-            connectionId,
-            userId: payload.userId,
-            companyId: payload.companyId,
-          },
-          metadata: {
-            timestamp: new Date().toISOString(),
-          },
-        },
-      });
+      
+      if (prisma) {
+        try {
+          await prisma.event.create({
+            data: {
+              type: 'websocket.connected',
+              source: 'api-gateway',
+              data: {
+                connectionId,
+                userId: payload.userId,
+                companyId: payload.companyId,
+              },
+              metadata: {
+                timestamp: new Date().toISOString(),
+              },
+            },
+          });
+        } catch (error) {
+          log.error('Failed to store WebSocket connection:', error);
+        }
+      }
       
       // Poll for events periodically instead of using Redis pub/sub
-      const pollInterval = setInterval(async () => {
-        try {
-          // Get recent events for this user
-          const events = await prisma.event.findMany({
-            where: {
-              createdAt: { gte: new Date(Date.now() - 5000) }, // Last 5 seconds
-              OR: [
-                { data: { path: ['userId'], equals: payload.userId } },
-                { data: { path: ['companyId'], equals: payload.companyId } },
-              ],
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-          });
-          
-          for (const event of events) {
-            ws.send(JSON.stringify({
-              type: event.type,
-              data: event.data,
-              timestamp: event.createdAt,
-            }));
+      let pollInterval: NodeJS.Timeout | null = null;
+      
+      if (prisma) {
+        pollInterval = setInterval(async () => {
+          try {
+            // Get recent events for this user
+            const events = await prisma.event.findMany({
+              where: {
+                createdAt: { gte: new Date(Date.now() - 5000) }, // Last 5 seconds
+                OR: [
+                  { data: { path: ['userId'], equals: payload.userId } },
+                  { data: { path: ['companyId'], equals: payload.companyId } },
+                ],
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 10,
+            });
+            
+            for (const event of events) {
+              ws.send(JSON.stringify({
+                type: event.type,
+                data: event.data,
+                timestamp: event.createdAt,
+              }));
+            }
+          } catch (error) {
+            log.error('Event polling error:', error);
           }
-        } catch (error) {
-          log.error('Event polling error:', error);
-        }
-      }, 1000); // Poll every second
+        }, 1000); // Poll every second
+      }
       
       ws.on('close', async () => {
-        clearInterval(pollInterval);
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
         
         // Record disconnection
-        await prisma.event.create({
-          data: {
-            type: 'websocket.disconnected',
-            source: 'api-gateway',
-            data: { connectionId },
-            metadata: {
-              timestamp: new Date().toISOString(),
+        if (prisma) {
+          await prisma.event.create({
+            data: {
+              type: 'websocket.disconnected',
+              source: 'api-gateway',
+              data: { connectionId },
+              metadata: {
+                timestamp: new Date().toISOString(),
+              },
             },
-          },
-        }).catch(() => {}); // Ignore errors on cleanup
+          }).catch(() => {}); // Ignore errors on cleanup
+        }
       });
       
       // Handle incoming messages
@@ -385,20 +429,22 @@ function setupWebSocketServer() {
           const message = JSON.parse(data.toString());
           
           // Create event for message processing
-          await prisma.event.create({
-            data: {
-              type: `websocket.message.${message.type}`,
-              source: 'api-gateway',
+          if (prisma) {
+            await prisma.event.create({
               data: {
-                ...message,
-                userId: payload.userId,
-                connectionId,
+                type: `websocket.message.${message.type}`,
+                source: 'api-gateway',
+                data: {
+                  ...message,
+                  userId: payload.userId,
+                  connectionId,
+                },
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                },
               },
-              metadata: {
-                timestamp: new Date().toISOString(),
-              },
-            },
-          });
+            });
+          }
           
           // Acknowledge receipt
           ws.send(JSON.stringify({
@@ -434,7 +480,9 @@ server = serve({
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   log.info('Shutting down gracefully...');
-  await prisma.$disconnect();
+  if (prisma) {
+    await prisma.$disconnect();
+  }
   if (wss) {
     wss.close();
   }
