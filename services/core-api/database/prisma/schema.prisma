@@ -43,6 +43,7 @@ model Factory {
   company     Company  @relation(fields: [companyId], references: [id])
   divisions   Division[]
   equipment   Equipment[]
+  factoryAccess FactoryAccess[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -61,10 +62,12 @@ model User {
   phone         String?
   avatar        String?
   isActive      Boolean  @default(true)
+  accessLevel   AccessLevel @default(FACTORY)
   
   company       Company  @relation(fields: [companyId], references: [id])
   sessions      Session[]
   activities    ActivityLog[]
+  factoryAccess FactoryAccess[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -305,6 +308,24 @@ model Session {
   @@index([token, expiresAt])
 }
 
+model FactoryAccess {
+  id          String   @id @default(cuid())
+  userId      String
+  factoryId   String
+  role        Role     // Role can be different per factory
+  permissions Json?    // Additional factory-specific permissions
+  
+  user        User     @relation(fields: [userId], references: [id])
+  factory     Factory  @relation(fields: [factoryId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, factoryId])
+  @@index([userId])
+  @@index([factoryId])
+}
+
 model ActivityLog {
   id        String   @id @default(cuid())
   userId    String?
@@ -314,12 +335,14 @@ model ActivityLog {
   data      Json?
   ip        String?
   userAgent String?
+  factoryId String?  // Track which factory context the action was performed in
   
   user      User?    @relation(fields: [userId], references: [id])
   
   createdAt DateTime @default(now())
   
   @@index([userId, entity, createdAt])
+  @@index([factoryId, createdAt])
 }
 
 model MaintenanceRecord {
@@ -401,4 +424,10 @@ enum MaintenanceType {
   CORRECTIVE
   PREDICTIVE
   EMERGENCY
+}
+
+enum AccessLevel {
+  HQ          // Can access all factories/companies
+  FACTORY     // Can access only assigned factories
+  DIVISION    // Can access only specific divisions within factories
 }

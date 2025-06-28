@@ -1,17 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+interface Factory {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface User {
   id: string;
   email: string;
   username: string;
   name: string;
   role: 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
+  accessLevel: 'HQ' | 'FACTORY' | 'DIVISION';
   company?: {
     id: string;
     name: string;
     code: string;
   };
+  allowedFactories: Factory[];
 }
 
 interface AuthStore {
@@ -19,18 +27,24 @@ interface AuthStore {
   token: string | null;
   isAuthenticated: boolean;
   companyName: string | null;
+  currentFactory: string | 'all';
+  allowedFactories: Factory[];
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   setUser: (user: User, token: string) => void;
+  switchFactory: (factoryId: string | 'all') => void;
+  canAccessAllFactories: () => boolean;
 }
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
       companyName: null,
+      currentFactory: 'all',
+      allowedFactories: [],
 
       login: async (username: string, password: string) => {
         const { api } = await import('@/lib/api');
@@ -41,6 +55,9 @@ export const useAuthStore = create<AuthStore>()(
           token: response.token,
           isAuthenticated: true,
           companyName: response.user.company?.name || null,
+          allowedFactories: response.user.allowedFactories || [],
+          currentFactory: response.user.accessLevel === 'HQ' ? 'all' : 
+                         (response.user.allowedFactories?.[0]?.id || 'all'),
         });
 
         // Save token to localStorage and cookie for API calls
@@ -57,6 +74,8 @@ export const useAuthStore = create<AuthStore>()(
           token: null,
           isAuthenticated: false,
           companyName: null,
+          currentFactory: 'all',
+          allowedFactories: [],
         });
         
         if (typeof window !== 'undefined') {
@@ -72,7 +91,24 @@ export const useAuthStore = create<AuthStore>()(
           token,
           isAuthenticated: true,
           companyName: user.company?.name || null,
+          allowedFactories: user.allowedFactories || [],
+          currentFactory: user.accessLevel === 'HQ' ? 'all' : 
+                         (user.allowedFactories?.[0]?.id || 'all'),
         });
+      },
+
+      switchFactory: (factoryId: string | 'all') => {
+        const state = get();
+        if (state.user?.accessLevel === 'HQ' || 
+            factoryId === 'all' ||
+            state.allowedFactories.some(f => f.id === factoryId)) {
+          set({ currentFactory: factoryId });
+        }
+      },
+
+      canAccessAllFactories: () => {
+        const state = get();
+        return state.user?.accessLevel === 'HQ';
       },
     }),
     {

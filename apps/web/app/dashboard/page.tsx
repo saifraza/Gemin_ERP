@@ -13,6 +13,8 @@ import { QuickActions } from '@/components/dashboard/quick-actions';
 import { CommandPalette } from '@/components/command-palette';
 import { AIAssistant } from '@/components/ai-assistant';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
+import { HQDashboard } from '@/components/dashboard/hq-dashboard';
+import { FactoryDashboard } from '@/components/dashboard/factory-dashboard';
 
 // Sample data
 const transactionData = [
@@ -97,7 +99,7 @@ const inventoryData = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, companyName, isAuthenticated } = useAuthStore();
+  const { user, companyName, isAuthenticated, currentFactory, canAccessAllFactories } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [sidebarItem, setSidebarItem] = useState('operations-overview');
   const [aiOpen, setAiOpen] = useState(false);
@@ -205,25 +207,36 @@ export default function DashboardPage() {
         
         <div className="content-area">
           <div className="mb-6">
-            <h1 className="text-2xl font-normal text-gray-800 mb-2">Operations Dashboard</h1>
+            <h1 className="text-2xl font-normal text-gray-800 mb-2">
+              {currentFactory === 'all' ? 'Consolidated' : 'Factory'} Operations Dashboard
+            </h1>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span>Home</span>
               <span>›</span>
               <span>Operations</span>
               <span>›</span>
-              <span>Dashboard</span>
+              <span>{currentFactory === 'all' ? 'All Factories' : 'Factory Dashboard'}</span>
             </div>
           </div>
           
           <QuickActions onAction={handleCommand} />
           
-          <div className="kpi-grid">
-            <KPICard
-              label="Total Revenue"
-              value="$4.28M"
-              trend={{ direction: 'up', value: '12.5% vs last month' }}
-              variant="success"
-            />
+          {/* Conditionally render HQ or Factory dashboard */}
+          {currentFactory === 'all' && canAccessAllFactories() ? (
+            <HQDashboard />
+          ) : (
+            <FactoryDashboard />
+          )}
+          
+          {/* Keep original dashboard content hidden for now */}
+          <div className="hidden">
+            <div className="kpi-grid">
+              <KPICard
+                label="Total Revenue"
+                value="$4.28M"
+                trend={{ direction: 'up', value: '12.5% vs last month' }}
+                variant="success"
+              />
             <KPICard
               label="Active Orders"
               value="1,847"
@@ -339,6 +352,7 @@ export default function DashboardPage() {
               actions={<button className="btn">Warehouse Details</button>}
             />
           </div>
+          </div> {/* End of hidden div */}
         </div>
       </div>
       

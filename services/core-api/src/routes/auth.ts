@@ -31,6 +31,8 @@ const registerSchema = z.object({
   name: z.string(),
   companyId: z.string().optional(),
   role: z.enum(['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER']).optional(),
+  accessLevel: z.enum(['HQ', 'FACTORY', 'DIVISION']).optional(),
+  factoryIds: z.array(z.string()).optional(), // For factory-level users
 });
 
 // JWT secret
@@ -42,7 +44,7 @@ const secret = new TextEncoder().encode(
 authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
   const { username, password } = c.req.valid('json');
   
-  // Find user by username
+  // Find user by username with factory access
   const user = await prisma.user.findFirst({
     where: {
       username,
@@ -50,6 +52,11 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
     },
     include: {
       company: true,
+      factoryAccess: {
+        include: {
+          factory: true
+        }
+      }
     },
   });
   
@@ -57,12 +64,13 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
     return c.json({ error: 'Invalid credentials' }, 401);
   }
   
-  // Create JWT
+  // Create JWT with access level
   const token = await new SignJWT({
     userId: user.id,
     email: user.email,
     role: user.role,
     companyId: user.companyId,
+    accessLevel: user.accessLevel,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -102,6 +110,24 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
     },
   });
   
+  // Get allowed factories
+  let allowedFactories = [];
+  if (user.accessLevel === 'HQ') {
+    // HQ users can access all factories in their company
+    const allFactories = await prisma.factory.findMany({
+      where: { companyId: user.companyId },
+      select: { id: true, name: true, code: true }
+    });
+    allowedFactories = allFactories;
+  } else {
+    // Factory users can only access assigned factories
+    allowedFactories = user.factoryAccess.map(fa => ({
+      id: fa.factory.id,
+      name: fa.factory.name,
+      code: fa.factory.code
+    }));
+  }
+
   return c.json({
     token,
     user: {
@@ -110,7 +136,9 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
       username: user.username,
       name: user.name,
       role: user.role,
+      accessLevel: user.accessLevel,
       company: user.company,
+      allowedFactories,
     },
   });
 });
@@ -179,12 +207,24 @@ authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
         name: data.name,
         passwordHash,
         role: data.role || 'VIEWER',
+        accessLevel: data.accessLevel || 'FACTORY',
         companyId,
       },
       include: {
         company: true,
       },
     });
+    
+    // If factory IDs provided and user is not HQ, create factory access
+    if (data.factoryIds && data.factoryIds.length > 0 && data.accessLevel !== 'HQ') {
+      await prisma.factoryAccess.createMany({
+        data: data.factoryIds.map(factoryId => ({
+          userId: user.id,
+          factoryId,
+          role: user.role,
+        })),
+      });
+    }
     
     return c.json({
       message: 'User created successfully',

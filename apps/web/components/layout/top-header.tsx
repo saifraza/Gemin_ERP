@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FactorySelector } from './factory-selector';
 
 interface TopHeaderProps {
   companyName?: string;
@@ -51,6 +52,7 @@ export function TopHeader({
       </div>
       
       <div className="flex items-center gap-8 text-xs">
+        <FactorySelector />
         <div>Server: {serverStatus.server} | Response: {serverStatus.responseTime}ms</div>
         <div>Last Sync: {lastSync ? lastSync.toTimeString().slice(0, 8) : '--:--:--'}</div>
       </div>

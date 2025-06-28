@@ -2,18 +2,34 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
+import { factoryAccessMiddleware, getFactoryContext } from '../middleware/factory-access.js';
 
 const companyRoutes = new Hono();
+
+// Apply factory access middleware to protected routes
+companyRoutes.use('/', factoryAccessMiddleware);
+companyRoutes.use('/:id', factoryAccessMiddleware);
 
 // Health check
 companyRoutes.get('/health', (c) => {
   return c.json({ status: 'ok', message: 'Company routes are loaded' });
 });
 
-// Get all companies
+// Get all companies (filtered by access)
 companyRoutes.get('/', async (c) => {
+  const context = getFactoryContext(c);
+  
+  // Users can only see their own company
   const companies = await prisma.company.findMany({
+    where: {
+      id: context.companyId,
+    },
     include: {
+      factories: {
+        where: context.accessLevel === 'HQ' 
+          ? {} 
+          : { id: { in: context.allowedFactories } },
+      },
       _count: {
         select: {
           factories: true,
@@ -29,11 +45,21 @@ companyRoutes.get('/', async (c) => {
 // Get company by ID
 companyRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const context = getFactoryContext(c);
+  
+  // Verify user can access this company
+  if (id !== context.companyId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
   
   const company = await prisma.company.findUnique({
     where: { id },
     include: {
-      factories: true,
+      factories: {
+        where: context.accessLevel === 'HQ' 
+          ? {} 
+          : { id: { in: context.allowedFactories } },
+      },
       users: {
         select: {
           id: true,
@@ -41,6 +67,20 @@ companyRoutes.get('/:id', async (c) => {
           email: true,
           role: true,
         },
+        where: context.accessLevel === 'HQ'
+          ? {}
+          : {
+              OR: [
+                { id: context.userId }, // User can see themselves
+                {
+                  factoryAccess: {
+                    some: {
+                      factoryId: { in: context.allowedFactories }
+                    }
+                  }
+                }
+              ]
+            },
       },
     },
   });
