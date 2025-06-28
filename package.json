@@ -38,5 +38,9 @@
     "services/*",
     "packages/*",
     "tools/*"
-  ]
+  ],
+  "dependencies": {
+    "ioredis": "^5.6.1",
+    "pg": "^8.16.3"
+  }
 }
