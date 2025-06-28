@@ -35,42 +35,49 @@ export class EventBus extends EventEmitter {
       // Initialize Redis with proper error handling
       this.redis = new Redis(redisUrl, {
         retryStrategy: (times) => {
+          if (times > 10) {
+            log.error('Redis connection failed after 10 attempts');
+            return null;
+          }
           const delay = Math.min(times * 50, 2000);
           return delay;
         },
         maxRetriesPerRequest: 3,
         enableReadyCheck: true,
-        lazyConnect: true,
+        enableOfflineQueue: false,
       });
 
       // Handle Redis errors gracefully
       this.redis.on('error', (err) => {
-        log.error({ error: err }, 'Redis connection error');
+        log.error({ error: err.message }, 'Redis connection error');
       });
 
       this.redis.on('connect', () => {
         log.info('Connected to Redis');
-        this.isConnected = true;
       });
 
-      this.redis.on('ready', () => {
+      this.redis.on('ready', async () => {
         log.info('Redis ready for commands');
-      });
-
-      // Try to connect
-      await this.redis.connect();
-
-      // Setup subscriber
-      this.redisSubscriber = this.redis.duplicate();
-      await this.redisSubscriber.subscribe('erp:events:*');
-      
-      this.redisSubscriber.on('message', (channel, message) => {
+        this.isConnected = true;
+        
+        // Setup subscriber after connection is ready
         try {
-          const event = JSON.parse(message);
-          this.emit(channel, event);
-          this.processEvent(event);
+          this.redisSubscriber = this.redis.duplicate();
+          await this.redisSubscriber.subscribe('erp:events:*');
+          
+          this.redisSubscriber.on('message', (channel, message) => {
+            try {
+              const event = JSON.parse(message);
+              this.emit(channel, event);
+              this.processEvent(event);
+            } catch (error) {
+              log.error(error, 'Failed to process Redis event');
+            }
+          });
+          
+          log.info('Redis pub/sub initialized successfully');
         } catch (error) {
-          log.error(error, 'Failed to process Redis event');
+          log.error({ error }, 'Failed to setup Redis subscriber');
         }
       });
     } catch (error) {
