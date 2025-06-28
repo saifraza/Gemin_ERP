@@ -363,7 +363,10 @@ export class LLMRouter {
     const toolKeywords = [
       'status', 'production', 'efficiency', 'forecast',
       'analyze', 'show me', 'what is', 'how much',
-      'calculate', 'check', 'monitor', 'report'
+      'calculate', 'check', 'monitor', 'report',
+      'how to', 'how do i', 'where is', 'create user',
+      'add user', 'new user', 'manage', 'help',
+      'guide', 'tutorial', 'steps', 'navigate'
     ];
     
     const lowerPrompt = prompt.toLowerCase();

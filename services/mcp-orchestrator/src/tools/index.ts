@@ -6,6 +6,7 @@ import { analyticsTools } from './analytics-tools.js';
 import { workflowTools } from './workflow-tools.js';
 import { documentTools } from './document-tools.js';
 import { voiceTools } from './voice-tools.js';
+import { erpHelpTools } from './erp-help-tools.js';
 
 export function setupMCPTools(server: Server) {
   // Register all tool categories
@@ -16,6 +17,7 @@ export function setupMCPTools(server: Server) {
     ...workflowTools,
     ...documentTools,
     ...voiceTools,
+    ...erpHelpTools,
   ];
 
   // Create a map of tools for easy lookup

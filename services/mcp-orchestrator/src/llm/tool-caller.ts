@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { factoryTools } from '../tools/factory-tools.js';
 import { procurementTools } from '../tools/procurement-tools.js';
 import { analyticsTools } from '../tools/analytics-tools.js';
+import { erpHelpTools } from '../tools/erp-help-tools.js';
 import pino from 'pino';
 
 const log = pino({ name: 'tool-caller' });
@@ -25,7 +26,7 @@ export class ToolCaller {
     
     // Register all tools
     this.tools = new Map();
-    const allTools = [...factoryTools, ...procurementTools, ...analyticsTools];
+    const allTools = [...factoryTools, ...procurementTools, ...analyticsTools, ...erpHelpTools];
     allTools.forEach(tool => {
       this.tools.set(tool.name, tool);
     });
@@ -210,23 +211,34 @@ export class ToolCaller {
 
   private buildSystemPrompt(context?: any): string {
     let prompt = `You are an AI assistant for a modern sugar, ethanol, power, and animal feed factory ERP system.
-You have access to various tools to fetch real-time data and perform operations.`;
+You have access to various tools to fetch real-time data and perform operations.
+
+IMPORTANT: You can help users with:
+1. How-to questions: Use the 'erp_help' tool to provide step-by-step guides
+2. User management: Use 'user_management' tool to list, create, update users
+3. Navigation: Use 'navigation_guide' tool to help users find features
+4. Factory operations: Use 'factory_status' and other tools for real-time data
+
+For questions like "How do I create a user?", always use the erp_help tool first.`;
 
     if (context?.company) {
-      prompt += `\n\nCompany: ${context.company}`;
+      prompt += `\n\nCurrent Context:`;
+      prompt += `\nCompany: ${context.company}`;
       if (context.user) {
-        prompt += `\nUser: ${context.user.name} (${context.user.role})`;
+        prompt += `\nUser: ${context.user.name} (Role: ${context.user.role})`;
       }
       if (context.currentFactory) {
         prompt += `\nFactory: ${context.currentFactory}`;
       }
     }
 
-    prompt += `\n\nWhen answering questions:
-1. Use the available tools to fetch real-time data when needed
-2. Provide specific, actionable insights based on the data
-3. If you need more information, ask for clarification
-4. Always cite the data source when presenting numbers`;
+    prompt += `\n\nGuidelines:
+1. For "how to" questions, use erp_help tool
+2. For user operations, use user_management tool
+3. For finding features, use navigation_guide tool
+4. For factory data, use factory_status tool
+5. Always provide clear, step-by-step instructions
+6. Respect user permissions based on their role`;
 
     return prompt;
   }
