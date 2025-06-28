@@ -67,6 +67,10 @@ async function connectRedis(): Promise<Redis | null> {
 
     redisInstance.on('connect', () => {
       log.info('Redis connected successfully');
+    });
+
+    redisInstance.on('ready', () => {
+      log.info('Redis is ready to accept commands');
       redisConnecting = false;
     });
 
@@ -75,13 +79,22 @@ async function connectRedis(): Promise<Redis | null> {
       redisConnecting = false;
     });
 
-    // Try to connect with timeout
-    await Promise.race([
-      redisInstance.connect(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
-      )
-    ]);
+    // Wait for connection with timeout
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Redis connection timeout'));
+      }, 5000);
+      
+      redisInstance.once('ready', () => {
+        clearTimeout(timeout);
+        resolve(redisInstance);
+      });
+      
+      redisInstance.once('error', (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
 
     return redisInstance;
   } catch (error) {
