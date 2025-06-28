@@ -4,22 +4,31 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Allow access to auth pages and API routes
-  if (
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname === '/test' ||
-    pathname === '/'
-  ) {
+  // List of public routes that don't require authentication
+  const publicRoutes = [
+    '/auth/login',
+    '/auth/register',
+    '/api',
+    '/_next',
+    '/favicon.ico',
+    '/',
+    '/test'
+  ];
+  
+  // Check if the current path is a public route
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  
+  if (isPublicRoute) {
     return NextResponse.next();
   }
   
-  // Check for auth token
+  // For all other routes, check for auth token
   const token = request.cookies.get('auth_token')?.value;
+  const authStorage = request.cookies.get('auth-storage')?.value;
   
-  if (!token && pathname.startsWith('/dashboard')) {
-    // Redirect to login if no token
+  // Check both cookie and localStorage (via cookie)
+  if (!token && !authStorage) {
+    // Redirect to login if no authentication
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
   
