@@ -7,6 +7,15 @@ import { prisma, redis } from '../index.js';
 
 const authRoutes = new Hono();
 
+// Health check for auth routes
+authRoutes.get('/health', (c) => {
+  return c.json({ 
+    status: 'ok', 
+    message: 'Auth routes are loaded',
+    endpoints: ['/login', '/register', '/test-register', '/verify', '/logout']
+  });
+});
+
 // Schemas
 const loginSchema = z.object({
   email: z.string().email().or(z.string().min(3)), // Allow username too
@@ -300,9 +309,9 @@ authRoutes.post('/test-register', async (c) => {
         companyId: user.companyId,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Test register error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message || 'Registration failed' }, 500);
   }
 });
 
