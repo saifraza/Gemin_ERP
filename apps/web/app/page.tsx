@@ -7,8 +7,16 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to dashboard
-    router.push('/dashboard');
+    // Check if user is logged in
+    const token = localStorage.getItem('auth_token');
+    
+    if (token) {
+      // User is logged in, go to dashboard
+      router.push('/dashboard');
+    } else {
+      // No user logged in, go to setup
+      router.push('/setup');
+    }
   }, [router]);
 
   return (
