@@ -22,44 +22,63 @@ interface SidebarProps {
 
 const defaultSections: SidebarSection[] = [
   {
-    title: 'Quick Links',
+    title: 'Main',
     items: [
-      { id: 'dashboard', label: 'Dashboard', href: '/dashboard', badge: 5 },
+      { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
       { id: 'master-data', label: 'Master Data', href: '/master-data' },
-      { id: 'user-roles', label: 'User Roles', href: '/user-roles' },
-      { id: 'switch-company', label: 'Switch Company', href: '/switch-company' },
-      { id: 'new-company', label: 'Company Setup', href: '/company/new' },
-      { id: 'test-backend', label: 'Test Backend', href: '/test' },
     ]
   },
   {
-    title: 'Favorites',
+    title: 'Production',
     items: [
-      { id: 'operations-overview', label: 'Operations Overview' },
-      { id: 'daily-summary', label: 'Daily Summary' },
-      { id: 'team-performance', label: 'Team Performance' },
-      { id: 'resource-status', label: 'Resource Status' },
-      { id: 'quality-metrics', label: 'Quality Metrics' },
+      { id: 'production-planning', label: 'Production Planning' },
+      { id: 'work-orders', label: 'Work Orders' },
+      { id: 'inventory', label: 'Inventory Management' },
+      { id: 'quality-control', label: 'Quality Control' },
     ]
   },
   {
-    title: 'Departments',
+    title: 'Sales & Distribution',
     items: [
-      { id: 'production', label: 'Production' },
-      { id: 'sales-distribution', label: 'Sales & Distribution' },
-      { id: 'procurement', label: 'Procurement' },
-      { id: 'finance', label: 'Finance' },
-      { id: 'human-resources', label: 'Human Resources' },
-      { id: 'it-services', label: 'IT Services' },
+      { id: 'sales-orders', label: 'Sales Orders' },
+      { id: 'customers', label: 'Customer Management' },
+      { id: 'pricing', label: 'Pricing & Discounts' },
+      { id: 'delivery', label: 'Delivery Schedule' },
     ]
   },
   {
-    title: 'Quick Reports',
+    title: 'Procurement',
     items: [
-      { id: 'performance-analysis', label: 'Performance Analysis' },
-      { id: 'cost-center-report', label: 'Cost Center Report' },
-      { id: 'efficiency-metrics', label: 'Efficiency Metrics' },
-      { id: 'variance-analysis', label: 'Variance Analysis' },
+      { id: 'purchase-orders', label: 'Purchase Orders' },
+      { id: 'vendors', label: 'Vendor Management' },
+      { id: 'rfq', label: 'Request for Quotation' },
+      { id: 'contracts', label: 'Contracts' },
+    ]
+  },
+  {
+    title: 'Finance',
+    items: [
+      { id: 'accounts-payable', label: 'Accounts Payable' },
+      { id: 'accounts-receivable', label: 'Accounts Receivable' },
+      { id: 'general-ledger', label: 'General Ledger' },
+      { id: 'financial-reports', label: 'Financial Reports' },
+    ]
+  },
+  {
+    title: 'Human Resources',
+    items: [
+      { id: 'employees', label: 'Employee Management' },
+      { id: 'attendance', label: 'Attendance' },
+      { id: 'payroll', label: 'Payroll' },
+      { id: 'leave-management', label: 'Leave Management' },
+    ]
+  },
+  {
+    title: 'Reports & Analytics',
+    items: [
+      { id: 'dashboards', label: 'Analytics Dashboard' },
+      { id: 'custom-reports', label: 'Custom Reports' },
+      { id: 'scheduled-reports', label: 'Scheduled Reports' },
     ]
   }
 ];

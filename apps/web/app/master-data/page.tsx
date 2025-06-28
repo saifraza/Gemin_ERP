@@ -14,6 +14,8 @@ export default function MasterDataPage() {
   const [factories, setFactories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('companies');
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   useEffect(() => {
     loadAllData();
@@ -134,6 +136,58 @@ export default function MasterDataPage() {
     }
   };
 
+  const startEditUser = (user: any) => {
+    setEditingUser(user.id);
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      companyId: user.company?.id,
+      accessLevel: user.accessLevel || 'FACTORY'
+    });
+  };
+
+  const saveUserEdit = async (userId: string) => {
+    try {
+      // Update role if changed
+      if (editFormData.role !== users.find(u => u.id === userId)?.role) {
+        const roleRes = await fetch(`${API_URL}/api/users/${userId}/role`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ role: editFormData.role })
+        });
+        
+        if (!roleRes.ok) {
+          const error = await roleRes.json();
+          toast.error(error.error || 'Failed to update role');
+          return;
+        }
+      }
+
+      // Update company if changed
+      if (editFormData.companyId !== users.find(u => u.id === userId)?.company?.id) {
+        const companyRes = await fetch(`${API_URL}/api/users/${userId}/company`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ companyId: editFormData.companyId })
+        });
+        
+        if (!companyRes.ok) {
+          const error = await companyRes.json();
+          toast.error(error.error || 'Failed to update company');
+          return;
+        }
+      }
+
+      toast.success('User updated successfully');
+      setEditingUser(null);
+      loadAllData();
+    } catch (error) {
+      toast.error('Error updating user');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -148,6 +202,9 @@ export default function MasterDataPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Master Data Management</h1>
           <p className="text-gray-600">Manage all companies, users, and factories in the system</p>
+          <p className="text-sm text-blue-600 mt-2">
+            ℹ️ Only SUPER_ADMIN users can modify data in this section
+          </p>
         </div>
 
         {/* Tabs */}
@@ -240,17 +297,7 @@ export default function MasterDataPage() {
         {/* Users Tab */}
         {activeTab === 'users' && (
           <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Users</h2>
-              <Button 
-                variant="outline"
-                onClick={() => window.location.href = '/switch-company'}
-                className="flex items-center gap-2"
-              >
-                <Building2 className="w-4 h-4" />
-                Switch Company Tool
-              </Button>
-            </div>
+            <h2 className="text-xl font-semibold mb-4">Users</h2>
             {users.length === 0 ? (
               <p className="text-gray-500">No users found</p>
             ) : (
@@ -262,7 +309,7 @@ export default function MasterDataPage() {
                       <th className="text-left p-2">Username</th>
                       <th className="text-left p-2">Email</th>
                       <th className="text-left p-2">Role</th>
-                      <th className="text-left p-2">Access Level</th>
+                      <th className="text-left p-2">Company</th>
                       <th className="text-left p-2">Status</th>
                       <th className="text-left p-2">Actions</th>
                     </tr>
@@ -270,54 +317,129 @@ export default function MasterDataPage() {
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.id} className="border-b">
-                        <td className="p-2">{user.name}</td>
-                        <td className="p-2">{user.username}</td>
-                        <td className="p-2">{user.email}</td>
-                        <td className="p-2">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm">
-                            {user.accessLevel || 'FACTORY'}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <span className={`px-2 py-1 rounded text-sm ${
-                            user.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {user.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => window.location.href = `/switch-company?userId=${user.id}`}
-                              title="Switch Company"
-                            >
-                              <Building2 className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => toast.info('Edit functionality coming soon')}
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteUser(user.id, user.name)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </td>
+                        {editingUser === user.id ? (
+                          <>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={editFormData.name}
+                                onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                                className="w-full px-2 py-1 border rounded"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={editFormData.username}
+                                onChange={(e) => setEditFormData({...editFormData, username: e.target.value})}
+                                className="w-full px-2 py-1 border rounded"
+                                disabled
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="email"
+                                value={editFormData.email}
+                                onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                                className="w-full px-2 py-1 border rounded"
+                                disabled
+                              />
+                            </td>
+                            <td className="p-2">
+                              <select
+                                value={editFormData.role}
+                                onChange={(e) => setEditFormData({...editFormData, role: e.target.value})}
+                                className="w-full px-2 py-1 border rounded"
+                              >
+                                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="MANAGER">MANAGER</option>
+                                <option value="OPERATOR">OPERATOR</option>
+                                <option value="VIEWER">VIEWER</option>
+                              </select>
+                            </td>
+                            <td className="p-2">
+                              <select
+                                value={editFormData.companyId}
+                                onChange={(e) => setEditFormData({...editFormData, companyId: e.target.value})}
+                                className="w-full px-2 py-1 border rounded"
+                              >
+                                {companies.map(company => (
+                                  <option key={company.id} value={company.id}>{company.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded text-sm ${
+                                user.isActive 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {user.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => saveUserEdit(user.id)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingUser(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="p-2">{user.name}</td>
+                            <td className="p-2">{user.username}</td>
+                            <td className="p-2">{user.email}</td>
+                            <td className="p-2">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm">
+                                {user.company?.name || 'No Company'}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              <span className={`px-2 py-1 rounded text-sm ${
+                                user.isActive 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {user.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startEditUser(user)}
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => deleteUser(user.id, user.name)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
