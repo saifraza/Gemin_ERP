@@ -9,8 +9,8 @@ const port = parseInt(process.env.PORT || '4000');
 
 // Service URLs - Use Railway internal URLs when available
 const services = {
-  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal:3001' : 'http://localhost:3001'),
-  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal:3000' : 'http://localhost:3000'),
+  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://dynamic-nourishment.railway.internal' : 'http://localhost:3001'),
+  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal' : 'http://localhost:3000'),
 };
 
 console.log('Service URLs:', services);
