@@ -19,9 +19,13 @@ export default function MasterDataPage() {
     loadAllData();
   }, []);
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): HeadersInit => {
     const token = localStorage.getItem('auth_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
   };
 
   const loadAllData = async () => {
