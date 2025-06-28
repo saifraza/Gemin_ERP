@@ -170,17 +170,26 @@ export class LLMRouter {
   private buildPrompt(request: LLMRequest): string {
     let prompt = request.prompt;
     
-    if (request.context) {
-      prompt = `Context:\n${JSON.stringify(request.context, null, 2)}\n\nRequest:\n${prompt}`;
+    // Build system prompt with context
+    let systemPrompt = `You are an AI assistant for a modern sugar, ethanol, power, and animal feed factory ERP system.`;
+    
+    if (request.context?.company) {
+      systemPrompt += `\n\nCompany Information:
+- Company Name: ${request.context.company}
+- Current User: ${request.context.user?.name || 'Unknown'} (${request.context.user?.role || 'User'})
+- Current Factory: ${request.context.currentFactory === 'all' ? 'All Factories (HQ View)' : request.context.currentFactory || 'Unknown'}`;
     }
     
-    // Add system context for factory operations
-    prompt = `You are an AI assistant for a modern sugar, ethanol, power, and animal feed factory ERP system. 
-    You have access to real-time data and can help with operations, analysis, and decision-making.
+    systemPrompt += `\n\nYou have access to real-time data and can help with operations, analysis, and decision-making.`;
     
-    ${prompt}`;
+    if (request.context?.conversationHistory?.length > 0) {
+      systemPrompt += `\n\nPrevious conversation:`;
+      request.context.conversationHistory.forEach((msg: any) => {
+        systemPrompt += `\n${msg.role}: ${msg.content}`;
+      });
+    }
     
-    return prompt;
+    return `${systemPrompt}\n\nUser Query: ${prompt}`;
   }
 
   async analyzeDocument(document: Buffer, documentType: string): Promise<any> {

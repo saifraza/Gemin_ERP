@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth';
 
 interface Message {
   id: string;
@@ -18,6 +19,7 @@ export function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState('auto');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user, companyName, currentFactory } = useAuthStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,7 +44,8 @@ export function AIChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/mcp/chat', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-gateway-production-00e9.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/mcp/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -50,6 +53,13 @@ export function AIChat() {
           model: selectedModel,
           context: {
             conversationHistory: messages.slice(-5), // Last 5 messages for context
+            user: {
+              name: user?.name,
+              role: user?.role,
+              username: user?.username,
+            },
+            company: companyName,
+            currentFactory: currentFactory,
           },
         }),
       });
