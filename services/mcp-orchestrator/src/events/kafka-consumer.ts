@@ -1,11 +1,21 @@
+import { EventBus } from './event-bus.js';
+import pino from 'pino';
+
+const log = pino({ name: 'kafka-consumer' });
+
 export class KafkaConsumer {
-  constructor(private eventBus: any) {}
+  private isRunning = false;
+
+  constructor(private eventBus: EventBus) {}
   
   async start() {
-    // Kafka consumer implementation
+    // Kafka is optional - we can run without it
+    log.info('Kafka consumer initialized (currently disabled - Kafka is optional)');
+    this.isRunning = true;
   }
   
   async stop() {
-    // Stop consumer
+    this.isRunning = false;
+    log.info('Kafka consumer stopped');
   }
 }

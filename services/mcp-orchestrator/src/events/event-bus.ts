@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events';
 import Redis from 'ioredis';
-import { Kafka, Producer, Consumer } from 'kafkajs';
 import pino from 'pino';
 
 const log = pino({ name: 'event-bus' });
@@ -15,69 +14,106 @@ export interface Event {
 }
 
 export class EventBus extends EventEmitter {
-  private redis: Redis;
-  private kafka: Kafka;
-  private producer: Producer;
-  private consumers: Map<string, Consumer> = new Map();
+  private redis: Redis | null = null;
+  private redisSubscriber: Redis | null = null;
+  private isConnected = false;
 
   constructor() {
     super();
-    
-    // Redis for pub/sub and caching
-    this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-    });
-
-    // Kafka for persistent event streaming
-    this.kafka = new Kafka({
-      clientId: 'mcp-orchestrator',
-      brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
-    });
-
-    this.producer = this.kafka.producer();
     this.initialize();
   }
 
   private async initialize() {
-    await this.producer.connect();
-    
-    // Subscribe to Redis for real-time events
-    const subscriber = this.redis.duplicate();
-    await subscriber.subscribe('erp:events:*');
-    
-    subscriber.on('message', (channel, message) => {
-      try {
-        const event = JSON.parse(message);
-        this.emit(channel, event);
-        this.processEvent(event);
-      } catch (error) {
-        log.error(error, 'Failed to process Redis event');
+    try {
+      const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST || null;
+      
+      if (!redisUrl) {
+        log.warn('No Redis URL provided, running without Redis pub/sub');
+        return;
       }
-    });
+
+      // Initialize Redis with proper error handling
+      this.redis = new Redis(redisUrl, {
+        retryStrategy: (times) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: true,
+        lazyConnect: true,
+      });
+
+      // Handle Redis errors gracefully
+      this.redis.on('error', (err) => {
+        log.error({ error: err }, 'Redis connection error');
+      });
+
+      this.redis.on('connect', () => {
+        log.info('Connected to Redis');
+        this.isConnected = true;
+      });
+
+      this.redis.on('ready', () => {
+        log.info('Redis ready for commands');
+      });
+
+      // Try to connect
+      await this.redis.connect();
+
+      // Setup subscriber
+      this.redisSubscriber = this.redis.duplicate();
+      await this.redisSubscriber.subscribe('erp:events:*');
+      
+      this.redisSubscriber.on('message', (channel, message) => {
+        try {
+          const event = JSON.parse(message);
+          this.emit(channel, event);
+          this.processEvent(event);
+        } catch (error) {
+          log.error(error, 'Failed to process Redis event');
+        }
+      });
+    } catch (error) {
+      log.error({ error }, 'Failed to initialize Redis, continuing without it');
+      this.redis = null;
+      this.redisSubscriber = null;
+    }
   }
 
   async publish(event: Event) {
-    // Publish to Redis for real-time
-    await this.redis.publish(`erp:events:${event.type}`, JSON.stringify(event));
-    
-    // Send to Kafka for persistence
-    await this.producer.send({
-      topic: `erp.${event.type}`,
-      messages: [
-        {
-          key: event.id,
-          value: JSON.stringify(event),
-          headers: {
-            source: event.source,
-            timestamp: event.timestamp,
-          },
-        },
-      ],
-    });
-    
-    // Process locally
+    // Always emit locally
+    this.emit(`erp:events:${event.type}`, event);
     this.processEvent(event);
+
+    // Try to publish to Redis if connected
+    if (this.redis && this.isConnected) {
+      try {
+        await this.redis.publish(`erp:events:${event.type}`, JSON.stringify(event));
+      } catch (error) {
+        log.error({ error }, 'Failed to publish to Redis');
+      }
+    }
+  }
+
+  subscribe(pattern: string, handler: (event: Event) => void): () => void {
+    const eventHandler = (event: Event) => handler(event);
+    
+    if (pattern === '*') {
+      // Subscribe to all events
+      this.on('erp:events:*', eventHandler);
+    } else {
+      // Subscribe to specific pattern
+      this.on(`erp:events:${pattern}`, eventHandler);
+    }
+
+    // Return unsubscribe function
+    return () => {
+      if (pattern === '*') {
+        this.off('erp:events:*', eventHandler);
+      } else {
+        this.off(`erp:events:${pattern}`, eventHandler);
+      }
+    };
   }
 
   private processEvent(event: Event) {
@@ -142,33 +178,12 @@ export class EventBus extends EventEmitter {
     });
   }
 
-  async subscribeToKafka(topics: string[], handler: (event: Event) => void) {
-    const groupId = `mcp-${Date.now()}`;
-    const consumer = this.kafka.consumer({ groupId });
-    
-    await consumer.connect();
-    await consumer.subscribe({ topics, fromBeginning: false });
-    
-    await consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        try {
-          const event = JSON.parse(message.value?.toString() || '{}');
-          handler(event);
-        } catch (error) {
-          log.error(error, 'Failed to process Kafka message');
-        }
-      },
-    });
-    
-    this.consumers.set(groupId, consumer);
-    return groupId;
-  }
-
   async close() {
-    await this.producer.disconnect();
-    for (const consumer of this.consumers.values()) {
-      await consumer.disconnect();
+    if (this.redis) {
+      this.redis.disconnect();
     }
-    this.redis.disconnect();
+    if (this.redisSubscriber) {
+      this.redisSubscriber.disconnect();
+    }
   }
 }
