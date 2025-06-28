@@ -153,16 +153,60 @@ companyRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id');
   
   try {
+    // Check if company exists and get related data count
+    const company = await prisma.company.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            users: true,
+            factories: true,
+          }
+        }
+      }
+    });
+    
+    if (!company) {
+      return c.json({ error: 'Company not found' }, 404);
+    }
+    
+    // Warning if company has related data
+    if (company._count.users > 0 || company._count.factories > 0) {
+      console.log(`Warning: Deleting company ${company.name} with ${company._count.users} users and ${company._count.factories} factories`);
+    }
+    
+    // Delete the company (this should cascade delete related records based on schema)
     await prisma.company.delete({
       where: { id },
     });
     
-    return c.json({ message: 'Company deleted successfully' });
+    return c.json({ 
+      success: true, 
+      message: 'Company deleted successfully',
+      deletedCounts: {
+        users: company._count.users,
+        factories: company._count.factories
+      }
+    });
   } catch (error: any) {
+    console.error('Error deleting company:', error);
+    
     if (error.code === 'P2025') {
       return c.json({ error: 'Company not found' }, 404);
     }
-    throw error;
+    
+    if (error.code === 'P2003') {
+      return c.json({ 
+        error: 'Cannot delete company due to existing relationships', 
+        details: 'This company has related data that prevents deletion'
+      }, 400);
+    }
+    
+    return c.json({ 
+      error: 'Failed to delete company', 
+      details: error.message,
+      code: error.code 
+    }, 500);
   }
 });
 

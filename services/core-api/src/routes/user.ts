@@ -34,13 +34,36 @@ userRoutes.delete('/:id', async (c) => {
     // Check if user exists
     const user = await prisma.user.findUnique({
       where: { id },
+      include: {
+        factoryAccess: true,
+        _count: {
+          select: {
+            sessions: true,
+          }
+        }
+      }
     });
     
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
     
-    // Delete the user (this will cascade delete related records)
+    // Delete related records first to avoid foreign key constraints
+    // Delete factory access
+    if (user.factoryAccess.length > 0) {
+      await prisma.factoryAccess.deleteMany({
+        where: { userId: id }
+      });
+    }
+    
+    // Delete sessions
+    if (user._count.sessions > 0) {
+      await prisma.session.deleteMany({
+        where: { userId: id }
+      });
+    }
+    
+    // Now delete the user
     await prisma.user.delete({
       where: { id },
     });
@@ -48,7 +71,20 @@ userRoutes.delete('/:id', async (c) => {
     return c.json({ success: true, message: 'User deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting user:', error);
-    return c.json({ error: 'Failed to delete user', details: error.message }, 500);
+    
+    // Check for specific error types
+    if (error.code === 'P2003') {
+      return c.json({ 
+        error: 'Cannot delete user due to existing relationships', 
+        details: 'This user has related data that must be deleted first'
+      }, 400);
+    }
+    
+    return c.json({ 
+      error: 'Failed to delete user', 
+      details: error.message,
+      code: error.code 
+    }, 500);
   }
 });
 
