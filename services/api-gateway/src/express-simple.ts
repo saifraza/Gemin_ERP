@@ -8,8 +8,11 @@ const app = express();
 const port = parseInt(process.env.PORT || '4000');
 
 // Helper to ensure URL has protocol
-const ensureProtocol = (url: string) => {
-  if (!url) return url;
+const ensureProtocol = (url: string | undefined) => {
+  if (!url) return undefined;
+  // Trim any whitespace
+  url = url.trim();
+  // Add http:// if no protocol specified
   return url.startsWith('http://') || url.startsWith('https://') ? url : `http://${url}`;
 };
 
