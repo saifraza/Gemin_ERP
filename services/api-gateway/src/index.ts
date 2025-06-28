@@ -36,7 +36,7 @@ async function getRedis(): Promise<Redis> {
 // Service URLs
 const services = {
   core: process.env.CORE_API_URL || 'http://localhost:3001',
-  mcp: process.env.MCP_URL || 'http://localhost:3000',
+  mcp: process.env.MCP_ORCHESTRATOR_URL || 'http://localhost:3000',
   factory: process.env.FACTORY_API_URL || 'http://localhost:3002',
   analytics: process.env.ANALYTICS_API_URL || 'http://localhost:3003',
 };
