@@ -34,11 +34,27 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('configured');
       
+      // Check for specific API errors
+      let errorType = 'processing';
+      let errorDetails = errorMessage;
+      
+      if (isApiKeyError) {
+        errorType = 'configuration';
+        errorDetails = 'Please check your API keys in Railway environment';
+      } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        errorType = 'authentication';
+        errorDetails = 'API key is invalid or expired. Please check your API keys.';
+      } else if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        errorType = 'rate_limit';
+        errorDetails = 'API rate limit exceeded or quota reached.';
+      }
+      
       return c.json({ 
         error: 'Failed to process chat request',
         message: errorMessage,
-        type: isApiKeyError ? 'configuration' : 'processing',
-        details: isApiKeyError ? 'Please check your API keys in Railway environment' : undefined
+        type: errorType,
+        details: errorDetails,
+        model: model
       }, 500);
     }
   });

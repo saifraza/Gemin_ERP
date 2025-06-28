@@ -172,10 +172,9 @@ export class LLMRouter {
       
       return result;
     } catch (error) {
-      log.error(error, `Failed with ${model}, trying fallback`);
-      // Fallback logic
-      if (model === 'gemini') return await this.chatWithClaude(request);
-      if (model === 'claude') return await this.chatWithGPT(request);
+      log.error({ error, model, errorMessage: error instanceof Error ? error.message : 'Unknown error' }, `Failed with ${model}`);
+      
+      // Don't use fallback - let the error propagate so we can see what's wrong
       throw error;
     }
   }
@@ -224,7 +223,7 @@ export class LLMRouter {
     }
     
     const model = this.gemini.getGenerativeModel({ 
-      model: 'gemini-1.5-pro',
+      model: 'gemini-pro', // Changed from gemini-1.5-pro
       generationConfig: {
         temperature: request.temperature || 0.7,
         maxOutputTokens: request.maxTokens || 8192,
@@ -240,7 +239,7 @@ export class LLMRouter {
     }
     
     return {
-      model: 'gemini-1.5-pro',
+      model: 'gemini-pro',
       response: responseText,
       usage: {
         promptTokens: result.response.usageMetadata?.promptTokenCount || 0,
