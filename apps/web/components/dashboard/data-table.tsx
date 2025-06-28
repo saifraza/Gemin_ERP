@@ -73,10 +73,18 @@ export function DataTable({
   return (
     <div className="data-panel">
       <div className="panel-header">
-        <h3 className="panel-title">{title}</h3>
-        {actions && (
-          <div className="flex items-center gap-2">
-            {actions}
+        <h2 className="panel-title">{title}</h2>
+        {actions || (
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+              Filter
+            </button>
+            <button className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+              Sort
+            </button>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+              New Transaction
+            </button>
           </div>
         )}
       </div>

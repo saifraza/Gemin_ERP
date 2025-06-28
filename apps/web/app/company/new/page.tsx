@@ -76,40 +76,40 @@ export default function NewCompanyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1419] text-white p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Create New Company</h1>
-          <p className="text-gray-400">Set up your company profile to get started with the ERP system</p>
+          <h1 className="text-3xl font-normal text-gray-800 mb-2">Create New Company</h1>
+          <p className="text-gray-600">Set up your company profile to get started with the ERP system</p>
         </div>
 
-        <Card className="bg-[#1a1f2e] border-gray-800">
+        <Card className="bg-white shadow-sm">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Basic Information */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Basic Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Company Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Name *</label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ACME Corporation"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Company Code *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Code *</label>
                   <input
                     type="text"
                     name="code"
                     value={formData.code}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ACME"
                   />
                 </div>
@@ -118,40 +118,40 @@ export default function NewCompanyPage() {
 
             {/* Contact Information */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Contact Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="contact@company.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Phone *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="+91 98765 43210"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-2">Website</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
                   <input
                     type="url"
                     name="website"
                     value={formData.website}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://www.company.com"
                   />
                 </div>
@@ -160,54 +160,54 @@ export default function NewCompanyPage() {
 
             {/* Address */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Address</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Address</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Street Address *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Street Address *</label>
                   <input
                     type="text"
                     name="address.street"
                     value={formData.address.street}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="123 Industrial Area"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">City *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
                     <input
                       type="text"
                       name="address.city"
                       value={formData.address.city}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Mumbai"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">State *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
                     <input
                       type="text"
                       name="address.state"
                       value={formData.address.state}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Maharashtra"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Postal Code *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code *</label>
                     <input
                       type="text"
                       name="address.postalCode"
                       value={formData.address.postalCode}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="400001"
                     />
                   </div>
@@ -217,27 +217,27 @@ export default function NewCompanyPage() {
 
             {/* Tax Information */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Tax Information</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Tax Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">GST Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">GST Number</label>
                   <input
                     type="text"
                     name="gstNumber"
                     value={formData.gstNumber}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="29ABCDE1234F1Z5"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">PAN Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PAN Number</label>
                   <input
                     type="text"
                     name="panNumber"
                     value={formData.panNumber}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-[#0f1419] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ABCDE1234F"
                   />
                 </div>

@@ -63,7 +63,7 @@
 
 /* ERP-specific styles */
 .top-header {
-  @apply bg-[#1e3a5f] h-12 flex items-center justify-between px-5 text-white shadow-md;
+  @apply bg-[#1e3a5f] h-12 flex items-center justify-between px-5 text-white shadow-sm;
 }
 
 .nav-bar {
@@ -88,27 +88,27 @@
 }
 
 .toolbar {
-  @apply bg-white h-12 flex items-center justify-between px-5 border-b;
+  @apply bg-white h-12 flex items-center justify-between px-5 border-b border-gray-200;
 }
 
 .sidebar {
-  @apply w-60 bg-card border-r overflow-y-auto;
+  @apply w-60 bg-white border-r border-gray-200 overflow-y-auto;
 }
 
 .sidebar-section {
-  @apply p-4 border-b border-border;
+  @apply p-4 border-b border-gray-100;
 }
 
 .sidebar-title {
-  @apply font-semibold text-foreground/70 mb-2 text-xs uppercase;
+  @apply font-semibold text-gray-600 mb-2 text-xs uppercase tracking-wider;
 }
 
 .sidebar-item {
-  @apply px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-between transition-colors text-foreground hover:bg-accent hover:text-accent-foreground;
+  @apply px-3 py-2 rounded cursor-pointer text-sm flex items-center justify-between transition-colors text-gray-700 hover:bg-gray-100;
 }
 
 .sidebar-item.active {
-  @apply bg-primary text-primary-foreground font-medium;
+  @apply bg-blue-50 text-blue-600 font-medium;
 }
 
 .sidebar-badge {
@@ -116,19 +116,19 @@
 }
 
 .content-area {
-  @apply flex-1 overflow-y-auto p-5 bg-[#f5f6fa];
+  @apply flex-1 overflow-y-auto p-6 bg-gray-50;
 }
 
 .dashboard-header {
-  @apply bg-white p-5 rounded mb-5 shadow-sm;
+  @apply bg-white p-6 rounded-lg mb-6 shadow-sm;
 }
 
 .dashboard-title {
-  @apply text-2xl font-light text-foreground mb-2;
+  @apply text-2xl font-normal text-gray-800 mb-2;
 }
 
 .breadcrumb {
-  @apply flex items-center gap-2 text-xs text-muted-foreground;
+  @apply flex items-center gap-2 text-sm text-gray-500;
 }
 
 /* KPI Cards */
@@ -137,7 +137,7 @@
 }
 
 .kpi-card {
-  @apply bg-white p-5 rounded shadow-sm border-l-4;
+  @apply bg-white p-6 rounded-lg shadow-sm border-l-4;
 }
 
 .kpi-card.success {
@@ -174,23 +174,24 @@
 
 /* Data Panels */
 .data-panel {
-  @apply bg-white rounded shadow-sm mb-5;
+  @apply bg-white rounded-lg shadow-sm mb-6;
 }
 
 .panel-header {
-  @apply px-5 py-4 border-b flex items-center justify-between;
+  @apply px-6 py-4 border-b border-gray-100 flex items-center justify-between;
 }
 
 .panel-title {
-  @apply text-base font-medium text-gray-800;
+  @apply text-lg font-medium text-gray-800;
 }
 
 /* Status badges */
 .status-badge {
-  @apply inline-block px-2 py-1 rounded text-[11px] font-medium;
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
 }
 
-.status-badge.active {
+.status-badge.active,
+.status-badge.processing {
   @apply bg-green-100 text-green-800;
 }
 
@@ -198,8 +199,13 @@
   @apply bg-yellow-100 text-yellow-800;
 }
 
-.status-badge.inactive {
+.status-badge.inactive,
+.status-badge.critical {
   @apply bg-red-100 text-red-800;
+}
+
+.status-badge.approved {
+  @apply bg-blue-100 text-blue-800;
 }
 
 /* Table styles */
@@ -208,15 +214,15 @@
 }
 
 .data-table th {
-  @apply bg-muted px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap border-b-2;
+  @apply bg-gray-50 px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap border-b border-gray-200;
 }
 
 .data-table td {
-  @apply px-4 py-3 text-sm border-b;
+  @apply px-4 py-3 text-sm border-b border-gray-100;
 }
 
 .data-table tbody tr {
-  @apply hover:bg-muted/50 transition-colors;
+  @apply hover:bg-gray-50 transition-colors;
 }
 
 .data-table tbody tr:focus {
@@ -277,24 +283,37 @@
 
 /* Quick Actions */
 .quick-actions {
-  @apply bg-card p-4 rounded shadow-sm mb-5;
+  @apply bg-white p-6 rounded-lg shadow-sm mb-6;
 }
 
 .quick-actions-grid {
-  @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-3;
+  @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4;
 }
 
 .quick-action {
-  @apply flex items-center gap-3 p-3 border rounded cursor-pointer transition-all text-sm text-card-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent;
+  @apply flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg cursor-pointer transition-all text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm;
 }
 
 .quick-action-icon {
-  @apply w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-base;
+  @apply w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl;
 }
 
 /* Footer */
 .footer {
   @apply bg-gray-100 px-5 py-3 flex justify-between items-center text-[11px] text-gray-500 border-t;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700;
+}
+
+.btn-sm {
+  @apply px-3 py-1 text-xs;
 }
 
 /* Keyboard shortcuts */

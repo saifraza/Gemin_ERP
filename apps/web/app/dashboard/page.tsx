@@ -171,9 +171,9 @@ export default function DashboardPage() {
         <Sidebar activeItem={sidebarItem} onItemClick={setSidebarItem} />
         
         <div className="content-area">
-          <div className="dashboard-header">
-            <h1 className="dashboard-title">Operations Dashboard</h1>
-            <div className="breadcrumb">
+          <div className="mb-6">
+            <h1 className="text-2xl font-normal text-gray-800 mb-2">Operations Dashboard</h1>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
               <span>Home</span>
               <span>›</span>
               <span>Operations</span>

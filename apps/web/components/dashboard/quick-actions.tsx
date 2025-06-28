@@ -30,7 +30,7 @@ export function QuickActions({ actions = defaultActions, onAction }: QuickAction
   
   return (
     <div className="quick-actions">
-      <div className="font-semibold mb-2">Quick Actions</div>
+      <h2 className="text-lg font-medium text-gray-800 mb-4">Quick Actions</h2>
       <div className="quick-actions-grid">
         {actions.map((action) => (
           <div
@@ -48,7 +48,7 @@ export function QuickActions({ actions = defaultActions, onAction }: QuickAction
             <div className="quick-action-icon">
               {action.icon}
             </div>
-            <div className="text-xs">{action.label}</div>
+            <div className="text-sm text-center">{action.label}</div>
           </div>
         ))}
       </div>
