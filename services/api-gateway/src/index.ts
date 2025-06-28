@@ -10,7 +10,30 @@ import pino from 'pino';
 import { jwtVerify } from 'jose';
 
 const log = pino({ name: 'api-gateway' });
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Initialize Redis with lazy connection
+let redis: Redis | null = null;
+
+async function getRedis(): Promise<Redis> {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      throw new Error('REDIS_URL is required');
+    }
+    
+    redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        if (times > 10) return null;
+        return Math.min(times * 50, 2000);
+      }
+    });
+    
+    redis.on('error', (err) => log.error('Redis error:', err.message));
+    redis.on('connect', () => log.info('Redis connected'));
+  }
+  return redis;
+}
 
 // Service URLs
 const services = {
@@ -38,16 +61,22 @@ app.use('*', logger());
 
 // Rate limiting middleware
 const rateLimiter = async (c: any, next: any) => {
-  const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
-  const key = `rate:${ip}`;
-  
-  const count = await redis.incr(key);
-  if (count === 1) {
-    await redis.expire(key, 60); // 1 minute window
-  }
-  
-  if (count > 100) { // 100 requests per minute
-    return c.json({ error: 'Rate limit exceeded' }, 429);
+  try {
+    const redisClient = await getRedis();
+    const ip = c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown';
+    const key = `rate:${ip}`;
+    
+    const count = await redisClient.incr(key);
+    if (count === 1) {
+      await redisClient.expire(key, 60); // 1 minute window
+    }
+    
+    if (count > 100) { // 100 requests per minute
+      return c.json({ error: 'Rate limit exceeded' }, 429);
+    }
+  } catch (error) {
+    log.warn('Rate limiting unavailable:', error.message);
+    // Continue without rate limiting if Redis is down
   }
   
   await next();
@@ -69,19 +98,29 @@ const authMiddleware = async (c: any, next: any) => {
   }
   
   try {
-    // Check cache first
-    const cached = await redis.get(`session:${token}`);
-    if (cached) {
-      c.set('user', JSON.parse(cached));
-      return next();
+    // Try to check cache first
+    try {
+      const redisClient = await getRedis();
+      const cached = await redisClient.get(`session:${token}`);
+      if (cached) {
+        c.set('user', JSON.parse(cached));
+        return next();
+      }
+    } catch (error) {
+      log.warn('Redis cache unavailable:', error.message);
     }
     
     // Verify JWT
     const { payload } = await jwtVerify(token, secret);
     c.set('user', payload);
     
-    // Cache for future requests
-    await redis.setex(`session:${token}`, 3600, JSON.stringify(payload));
+    // Try to cache for future requests
+    try {
+      const redisClient = await getRedis();
+      await redisClient.setex(`session:${token}`, 3600, JSON.stringify(payload));
+    } catch (error) {
+      log.warn('Failed to cache session:', error.message);
+    }
     
     await next();
   } catch {
@@ -97,18 +136,39 @@ app.get('/health', async (c) => {
     status: 'healthy',
     service: 'api-gateway',
     timestamp: new Date().toISOString(),
+    redis: 'unknown',
     services: {},
   };
   
-  // Check each service
-  for (const [name, url] of Object.entries(services)) {
+  // Check Redis
+  try {
+    const redisClient = await getRedis();
+    await redisClient.ping();
+    health.redis = 'connected';
+  } catch (error) {
+    health.redis = 'disconnected';
+    // Don't fail health check if Redis is down
+  }
+  
+  // Check each service (don't wait too long)
+  const serviceChecks = Object.entries(services).map(async ([name, url]) => {
     try {
-      const res = await fetch(`${url}/health`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      
+      const res = await fetch(`${url}/health`, { 
+        signal: controller.signal,
+        headers: { 'User-Agent': 'api-gateway-health-check' }
+      });
+      
+      clearTimeout(timeout);
       health.services[name] = res.ok ? 'healthy' : 'unhealthy';
     } catch {
       health.services[name] = 'unreachable';
     }
-  }
+  });
+  
+  await Promise.all(serviceChecks);
   
   return c.json(health);
 });
@@ -170,16 +230,26 @@ wss.on('connection', async (ws, req) => {
   try {
     const { payload } = await jwtVerify(token, secret);
     
-    // Subscribe to user-specific channels
-    const sub = redis.duplicate();
-    await sub.subscribe(`user:${payload.userId}`, `company:${payload.companyId}`);
+    let sub: Redis | null = null;
     
-    sub.on('message', (channel, message) => {
-      ws.send(JSON.stringify({ channel, data: JSON.parse(message) }));
-    });
+    // Try to subscribe to user-specific channels
+    try {
+      const redisClient = await getRedis();
+      sub = redisClient.duplicate();
+      await sub.subscribe(`user:${payload.userId}`, `company:${payload.companyId}`);
+      
+      sub.on('message', (channel, message) => {
+        ws.send(JSON.stringify({ channel, data: JSON.parse(message) }));
+      });
+    } catch (error) {
+      log.warn('WebSocket Redis subscription failed:', error.message);
+      // Continue without Redis pub/sub
+    }
     
     ws.on('close', () => {
-      sub.disconnect();
+      if (sub) {
+        sub.disconnect();
+      }
     });
     
     // Handle incoming messages
@@ -191,15 +261,21 @@ wss.on('connection', async (ws, req) => {
         switch (message.type) {
           case 'mcp':
             // Forward to MCP service
-            await redis.publish('mcp:requests', JSON.stringify({
-              ...message,
-              userId: payload.userId,
-            }));
+            try {
+              const redisClient = await getRedis();
+              await redisClient.publish('mcp:requests', JSON.stringify({
+                ...message,
+                userId: payload.userId,
+              }));
+            } catch (error) {
+              log.warn('Failed to publish to Redis:', error.message);
+              // Could forward directly to MCP service via HTTP as fallback
+            }
             break;
             
           case 'subscribe':
             // Subscribe to additional channels
-            if (message.channels) {
+            if (message.channels && sub) {
               await sub.subscribe(...message.channels);
             }
             break;
@@ -222,7 +298,9 @@ httpServer.listen(port, '0.0.0.0', () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   log.info('Shutting down gracefully...');
-  redis.disconnect();
+  if (redis) {
+    redis.disconnect();
+  }
   httpServer.close();
   process.exit(0);
 });
