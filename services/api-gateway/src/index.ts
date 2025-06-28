@@ -38,6 +38,13 @@ const services = {
   analytics: process.env.ANALYTICS_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://analytics-api.railway.internal:3003' : 'http://localhost:3003'),
 };
 
+// Log configuration for debugging
+log.info({
+  environment: process.env.RAILWAY_ENVIRONMENT || 'local',
+  databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+  services,
+}, 'API Gateway configuration');
+
 const app = new Hono();
 let server: any; // Will be set when server starts
 let wss: WebSocketServer;
@@ -138,13 +145,18 @@ app.get('/health', async (c) => {
   };
   
   // Check database
-  try {
-    await ensureDbConnection();
-    await prisma.$queryRaw`SELECT 1`;
-    health.database = 'connected';
-  } catch (error) {
-    health.database = 'error';
-    health.status = 'degraded';
+  if (!process.env.DATABASE_URL) {
+    health.database = 'not_configured';
+    // Don't fail health check if database is not configured
+  } else {
+    try {
+      await ensureDbConnection();
+      await prisma.$queryRaw`SELECT 1`;
+      health.database = 'connected';
+    } catch (error) {
+      health.database = 'error';
+      health.status = 'degraded';
+    }
   }
   
   // Check cache
