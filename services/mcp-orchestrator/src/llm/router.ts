@@ -80,16 +80,18 @@ export class LLMRouter {
     );
     
     log.info({ 
-      model, 
+      requestedModel: request.model,
+      selectedModel: model,
       promptTokens: this.tokenOptimizer.countTokens(optimizedPrompt),
-      hasTools: this.shouldUseTools(request.prompt)
+      hasTools: this.shouldUseTools(request.prompt),
+      promptPreview: request.prompt.substring(0, 50)
     }, 'Routing LLM request');
 
     try {
       let result;
       
       // Check if we should use tools based on the query
-      if (this.shouldUseTools(request.prompt) && model !== 'gemini') {
+      if (this.shouldUseTools(request.prompt) && model !== 'gemini' && model !== 'deepseek') {
         // Use tool-enabled models (Claude or GPT-4)
         // Respect user's model choice if they specifically selected one
         if (model === 'claude') {
@@ -104,8 +106,11 @@ export class LLMRouter {
             result = await this.toolCaller.callWithGPT4(request.prompt, request.context);
           }
         }
-      } else {
-        // Regular chat without tools (or Gemini with tools disabled)
+      }
+      
+      // If no tool call was made or for non-tool models
+      if (!result) {
+        // Regular chat without tools
         switch (model) {
           case 'gemini':
             result = await this.chatWithGemini(request);
@@ -125,7 +130,7 @@ export class LLMRouter {
       }
       
       // Track token usage
-      if (result.response && result.usage) {
+      if (result && result.response) {
         const usage = this.tokenOptimizer.calculateUsage(
           optimizedPrompt,
           result.response,
@@ -133,6 +138,16 @@ export class LLMRouter {
         );
         this.tokenOptimizer.trackUsage(usage);
         result.tokenUsage = usage;
+        
+        // Ensure model is always set in response
+        if (!result.model) {
+          result.model = model;
+        }
+        
+        log.info({ 
+          actualModel: result.model,
+          responseLength: result.response.length 
+        }, 'LLM response generated');
       }
       
       return result;

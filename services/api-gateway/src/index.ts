@@ -328,14 +328,40 @@ app.all('/api/*', async (c) => {
       body: c.req.method !== 'GET' ? await c.req.text() : undefined,
     });
     
+    const contentType = response.headers.get('content-type') || '';
     const data = await response.text();
+    
+    // Check if response is JSON or HTML error page
+    if (!response.ok && !contentType.includes('application/json')) {
+      // If service returned HTML error page, convert to JSON
+      log.error(`Service returned non-JSON error: ${response.status} from ${url}`);
+      return c.json({ 
+        error: 'Service error',
+        message: `Service returned ${response.status} error`,
+        details: serviceUrl ? `Check if ${serviceUrl} is running` : 'Service not configured'
+      }, response.status);
+    }
+    
+    // Forward the response with proper headers
+    const responseHeaders = Object.fromEntries(response.headers);
+    
+    // Ensure Content-Type is set for JSON responses
+    if (contentType.includes('application/json') && !responseHeaders['content-type']) {
+      responseHeaders['content-type'] = 'application/json';
+    }
+    
     return new Response(data, {
       status: response.status,
-      headers: Object.fromEntries(response.headers),
+      headers: responseHeaders,
     });
   } catch (error) {
     log.error('Service forward failed:', error);
-    return c.json({ error: 'Service unavailable' }, 503);
+    log.error(`Failed to forward to ${url}`);
+    return c.json({ 
+      error: 'Service unavailable',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      service: serviceUrl || 'unknown'
+    }, 503);
   }
 });
 
