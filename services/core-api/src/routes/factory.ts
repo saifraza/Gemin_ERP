@@ -7,7 +7,21 @@ const factoryRoutes = new Hono();
 
 // Get all factories
 factoryRoutes.get('/', async (c) => {
+  // Get user context from JWT
+  const userPayload = c.get('jwtPayload');
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userPayload.id },
+    select: { role: true, companyId: true }
+  });
+  
+  // Super admins can see all factories
+  // Regular users can only see factories from their company
+  const whereClause = currentUser?.role === 'SUPER_ADMIN' 
+    ? {} 
+    : { companyId: currentUser?.companyId };
+  
   const factories = await prisma.factory.findMany({
+    where: whereClause,
     include: {
       company: true,
       _count: {

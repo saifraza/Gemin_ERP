@@ -19,14 +19,17 @@ companyRoutes.get('/health', (c) => {
 companyRoutes.get('/', async (c) => {
   const context = getFactoryContext(c);
   
-  // Users can only see their own company
+  // Super admins can see all companies
+  // Regular users can only see their own company
+  const whereClause = context.role === 'SUPER_ADMIN' 
+    ? {} 
+    : { id: context.companyId };
+  
   const companies = await prisma.company.findMany({
-    where: {
-      id: context.companyId,
-    },
+    where: whereClause,
     include: {
       factories: {
-        where: context.accessLevel === 'HQ' 
+        where: context.accessLevel === 'HQ' || context.role === 'SUPER_ADMIN'
           ? {} 
           : { id: { in: context.allowedFactories } },
       },

@@ -5,7 +5,21 @@ const userRoutes = new Hono();
 
 // Get all users
 userRoutes.get('/', async (c) => {
+  // Get user context from JWT
+  const userPayload = c.get('jwtPayload');
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userPayload.id },
+    select: { role: true, companyId: true }
+  });
+  
+  // Super admins can see all users
+  // Regular users can only see users from their company
+  const whereClause = currentUser?.role === 'SUPER_ADMIN' 
+    ? {} 
+    : { companyId: currentUser?.companyId };
+  
   const users = await prisma.user.findMany({
+    where: whereClause,
     select: {
       id: true,
       email: true,
@@ -85,6 +99,41 @@ userRoutes.delete('/:id', async (c) => {
       details: error.message,
       code: error.code 
     }, 500);
+  }
+});
+
+// Update user role (for promoting to SUPER_ADMIN)
+userRoutes.put('/:id/role', async (c) => {
+  try {
+    const { id } = c.req.param();
+    const { role } = await c.req.json();
+    
+    // Get current user
+    const userPayload = c.get('jwtPayload');
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userPayload.id },
+      select: { role: true }
+    });
+    
+    // Only SUPER_ADMIN can promote others to SUPER_ADMIN
+    if (role === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+      return c.json({ error: 'Only super admins can create other super admins' }, 403);
+    }
+    
+    const user = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+      }
+    });
+    
+    return c.json({ success: true, user });
+  } catch (error: any) {
+    console.error('Error updating user role:', error);
+    return c.json({ error: 'Failed to update user role', details: error.message }, 500);
   }
 });
 
