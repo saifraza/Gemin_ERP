@@ -22,7 +22,7 @@ export function VoiceCommand() {
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onresult = async (event) => {
+    recognition.onresult = async (event: any) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
       
@@ -37,7 +37,7 @@ export function VoiceCommand() {
       }
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
     };
