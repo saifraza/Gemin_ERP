@@ -1,11 +1,13 @@
 'use client';
 
-import { FileText, Users, BarChart3, Package, DollarSign, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, Users, BarChart3, Package, Building2, FlaskConical } from 'lucide-react';
 
 interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
+  href?: string;
   onClick?: () => void;
 }
 
@@ -16,14 +18,16 @@ interface QuickActionsProps {
 
 const defaultActions: QuickAction[] = [
   { id: 'create-order', label: 'Create Order', icon: <FileText /> },
+  { id: 'new-company', label: 'New Company', icon: <Building2 />, href: '/company/new' },
   { id: 'new-customer', label: 'New Customer', icon: <Users /> },
   { id: 'generate-report', label: 'Generate Report', icon: <BarChart3 /> },
+  { id: 'test-backend', label: 'Test Backend', icon: <FlaskConical />, href: '/test' },
   { id: 'inventory-check', label: 'Inventory Check', icon: <Package /> },
-  { id: 'process-invoice', label: 'Process Invoice', icon: <DollarSign /> },
-  { id: 'view-analytics', label: 'View Analytics', icon: <TrendingUp /> },
 ];
 
 export function QuickActions({ actions = defaultActions, onAction }: QuickActionsProps) {
+  const router = useRouter();
+  
   return (
     <div className="quick-actions">
       <div className="font-semibold mb-2">Quick Actions</div>
@@ -33,8 +37,12 @@ export function QuickActions({ actions = defaultActions, onAction }: QuickAction
             key={action.id}
             className="quick-action"
             onClick={() => {
-              action.onClick?.();
-              onAction?.(action.id);
+              if (action.href) {
+                router.push(action.href);
+              } else {
+                action.onClick?.();
+                onAction?.(action.id);
+              }
             }}
           >
             <div className="quick-action-icon">
