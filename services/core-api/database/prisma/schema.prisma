@@ -1,0 +1,404 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== CORE MODELS ====================
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  gstNumber String?
+  panNumber String?
+  address   Json
+  phone     String
+  email     String
+  website   String?
+  logo      String?
+  
+  factories Factory[]
+  users     User[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([code])
+}
+
+model Factory {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String   @unique
+  type        FactoryType
+  location    Json
+  coordinates Json?    // {lat, lng}
+  capacity    Json     // {sugar: 5000, ethanol: 100000, power: 30, feed: 200}
+  
+  company     Company  @relation(fields: [companyId], references: [id])
+  divisions   Division[]
+  equipment   Equipment[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([companyId, code])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  companyId     String
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  role          Role
+  name          String
+  phone         String?
+  avatar        String?
+  isActive      Boolean  @default(true)
+  
+  company       Company  @relation(fields: [companyId], references: [id])
+  sessions      Session[]
+  activities    ActivityLog[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([email, username])
+}
+
+// ==================== MCP & AI MODELS ====================
+
+model MCPTool {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String
+  description String
+  schema      Json     // Tool input/output schema
+  handler     String   // Function name or endpoint
+  isActive    Boolean  @default(true)
+  
+  executions  ToolExecution[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ToolExecution {
+  id         String   @id @default(cuid())
+  toolId     String
+  userId     String?
+  input      Json
+  output     Json?
+  status     ExecutionStatus
+  error      String?
+  duration   Int?     // milliseconds
+  llmModel   String?
+  
+  tool       MCPTool  @relation(fields: [toolId], references: [id])
+  
+  createdAt  DateTime @default(now())
+}
+
+model AIConversation {
+  id         String   @id @default(cuid())
+  userId     String
+  title      String?
+  context    Json?
+  messages   AIMessage[]
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AIMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // user, assistant, system
+  content        String
+  toolCalls      Json?
+  model          String?
+  tokens         Int?
+  
+  conversation   AIConversation @relation(fields: [conversationId], references: [id])
+  
+  createdAt      DateTime @default(now())
+}
+
+// ==================== FACTORY OPERATIONS ====================
+
+model Division {
+  id          String   @id @default(cuid())
+  factoryId   String
+  type        DivisionType
+  name        String
+  code        String
+  isActive    Boolean  @default(true)
+  
+  factory     Factory  @relation(fields: [factoryId], references: [id])
+  departments Department[]
+  equipment   Equipment[]
+  production  ProductionBatch[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([factoryId, code])
+}
+
+model Equipment {
+  id           String   @id @default(cuid())
+  factoryId    String
+  divisionId   String?
+  name         String
+  code         String   @unique
+  type         String
+  manufacturer String?
+  model        String?
+  serialNumber String?
+  status       EquipmentStatus @default(OPERATIONAL)
+  location     Json?
+  specs        Json?
+  
+  factory      Factory  @relation(fields: [factoryId], references: [id])
+  division     Division? @relation(fields: [divisionId], references: [id])
+  telemetry    EquipmentTelemetry[]
+  maintenance  MaintenanceRecord[]
+  
+  installedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([factoryId, status])
+}
+
+model EquipmentTelemetry {
+  id          String   @id @default(cuid())
+  equipmentId String
+  timestamp   DateTime @default(now())
+  metrics     Json     // {temperature: 85, pressure: 25, vibration: 0.02}
+  status      String
+  alerts      Json?
+  
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  
+  @@index([equipmentId, timestamp])
+}
+
+// ==================== PRODUCTION ====================
+
+model ProductionBatch {
+  id           String   @id @default(cuid())
+  divisionId   String
+  batchNumber  String   @unique
+  productType  String
+  quantity     Float
+  unit         String
+  quality      Json?
+  status       BatchStatus
+  
+  division     Division @relation(fields: [divisionId], references: [id])
+  parameters   ProductionParameter[]
+  
+  startedAt    DateTime
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([divisionId, status])
+}
+
+model ProductionParameter {
+  id        String   @id @default(cuid())
+  batchId   String
+  name      String
+  value     Float
+  unit      String
+  timestamp DateTime @default(now())
+  
+  batch     ProductionBatch @relation(fields: [batchId], references: [id])
+  
+  @@index([batchId, timestamp])
+}
+
+// ==================== EVENTS & WORKFLOWS ====================
+
+model Event {
+  id        String   @id @default(cuid())
+  type      String
+  source    String
+  data      Json
+  metadata  Json?
+  processed Boolean  @default(false)
+  
+  workflows WorkflowInstance[]
+  
+  createdAt DateTime @default(now())
+  
+  @@index([type, processed, createdAt])
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  trigger     Json     // Event conditions
+  steps       Json     // BPMN-like definition
+  isActive    Boolean  @default(true)
+  
+  instances   WorkflowInstance[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkflowInstance {
+  id         String   @id @default(cuid())
+  templateId String
+  eventId    String?
+  status     WorkflowStatus
+  context    Json
+  currentStep String?
+  error      String?
+  
+  template   WorkflowTemplate @relation(fields: [templateId], references: [id])
+  event      Event? @relation(fields: [eventId], references: [id])
+  
+  startedAt  DateTime @default(now())
+  completedAt DateTime?
+  
+  @@index([templateId, status])
+}
+
+// ==================== SUPPORTING MODELS ====================
+
+model Department {
+  id         String   @id @default(cuid())
+  divisionId String
+  name       String
+  code       String
+  head       String?
+  
+  division   Division @relation(fields: [divisionId], references: [id])
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([divisionId, code])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  
+  user      User     @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+  
+  @@index([token, expiresAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  data      Json?
+  ip        String?
+  userAgent String?
+  
+  user      User?    @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, entity, createdAt])
+}
+
+model MaintenanceRecord {
+  id           String   @id @default(cuid())
+  equipmentId  String
+  type         MaintenanceType
+  description  String
+  performedBy  String
+  cost         Float?
+  nextDue      DateTime?
+  
+  equipment    Equipment @relation(fields: [equipmentId], references: [id])
+  
+  performedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  
+  @@index([equipmentId, type])
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+enum FactoryType {
+  INTEGRATED  // All divisions
+  SUGAR_ONLY
+  DISTILLERY
+  COGEN
+}
+
+enum DivisionType {
+  SUGAR
+  ETHANOL
+  POWER
+  FEED
+  COMMON
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  MAINTENANCE
+  FAULT
+  IDLE
+  DECOMMISSIONED
+}
+
+enum BatchStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  ON_HOLD
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+
+enum WorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  PREDICTIVE
+  EMERGENCY
+}

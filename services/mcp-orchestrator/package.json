@@ -26,8 +26,8 @@
     "langchain": "^0.1.0",
     "ws": "^8.16.0",
     "@prisma/client": "^5.9.0",
-    "@modern-erp/database": "workspace:*",
-    "@modern-erp/shared-types": "workspace:*"
+    "@modern-erp/database": "file:./database",
+    "@modern-erp/shared-types": "file:./shared-types"
   },
   "devDependencies": {
     "@types/ws": "^8.5.10",
