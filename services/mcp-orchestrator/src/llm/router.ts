@@ -199,12 +199,17 @@ export class LLMRouter {
     const prompt = this.buildPrompt(request);
     const result = await model.generateContent(prompt);
     
+    const responseText = result.response.text();
+    if (!responseText) {
+      throw new Error('Empty response from Gemini');
+    }
+    
     return {
       model: 'gemini-1.5-pro',
-      response: result.response.text(),
+      response: responseText,
       usage: {
-        promptTokens: result.response.usageMetadata?.promptTokenCount,
-        completionTokens: result.response.usageMetadata?.candidatesTokenCount,
+        promptTokens: result.response.usageMetadata?.promptTokenCount || 0,
+        completionTokens: result.response.usageMetadata?.candidatesTokenCount || 0,
       },
     };
   }
@@ -226,12 +231,17 @@ export class LLMRouter {
       ],
     });
 
+    const responseText = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    if (!responseText) {
+      throw new Error('Empty response from Claude');
+    }
+    
     return {
       model: 'claude-3-opus',
-      response: response.content[0].type === 'text' ? response.content[0].text : '',
+      response: responseText,
       usage: {
-        promptTokens: response.usage.input_tokens,
-        completionTokens: response.usage.output_tokens,
+        promptTokens: response.usage?.input_tokens || 0,
+        completionTokens: response.usage?.output_tokens || 0,
       },
     };
   }
@@ -254,11 +264,19 @@ export class LLMRouter {
       tools: request.tools,
     });
 
+    const responseText = completion.choices[0]?.message?.content || '';
+    if (!responseText) {
+      throw new Error('Empty response from GPT-4');
+    }
+    
     return {
       model: 'gpt-4-turbo',
-      response: completion.choices[0].message.content,
-      toolCalls: completion.choices[0].message.tool_calls,
-      usage: completion.usage,
+      response: responseText,
+      toolCalls: completion.choices[0]?.message?.tool_calls,
+      usage: {
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
+      },
     };
   }
 
@@ -279,12 +297,17 @@ export class LLMRouter {
       max_tokens: request.maxTokens || 4096,
     });
 
+    const responseText = completion.choices[0]?.message?.content || '';
+    if (!responseText) {
+      throw new Error('Empty response from DeepSeek');
+    }
+    
     return {
       model: 'deepseek-chat',
-      response: completion.choices[0].message.content,
+      response: responseText,
       usage: {
-        promptTokens: completion.usage?.prompt_tokens,
-        completionTokens: completion.usage?.completion_tokens,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
       },
     };
   }

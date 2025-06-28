@@ -109,24 +109,26 @@ export class ToolCaller {
             ],
           });
 
+          const responseText = followUp.content[0]?.type === 'text' ? followUp.content[0].text : '';
           return {
-            response: followUp.content[0].type === 'text' ? followUp.content[0].text : '',
+            response: responseText || 'Tool executed successfully',
             toolsUsed: [{ name: toolCall.name, input: toolCall.input, result }],
             usage: {
-              promptTokens: response.usage.input_tokens + followUp.usage.input_tokens,
-              completionTokens: response.usage.output_tokens + followUp.usage.output_tokens,
+              promptTokens: (response.usage?.input_tokens || 0) + (followUp.usage?.input_tokens || 0),
+              completionTokens: (response.usage?.output_tokens || 0) + (followUp.usage?.output_tokens || 0),
             },
           };
         }
       }
 
       // No tool calls, just return the response
+      const responseText = response.content[0]?.type === 'text' ? response.content[0].text : '';
       return {
-        response: response.content[0].type === 'text' ? response.content[0].text : '',
+        response: responseText || 'I understand your request.',
         toolsUsed: [],
         usage: {
-          promptTokens: response.usage.input_tokens,
-          completionTokens: response.usage.output_tokens,
+          promptTokens: response.usage?.input_tokens || 0,
+          completionTokens: response.usage?.output_tokens || 0,
         },
       };
     } catch (error) {
@@ -184,8 +186,9 @@ export class ToolCaller {
           max_tokens: 4096,
         });
 
+        const responseText = followUp.choices[0]?.message?.content || '';
         return {
-          response: followUp.choices[0].message.content,
+          response: responseText || 'Tool executed successfully',
           toolsUsed: message.tool_calls.map(tc => ({
             name: tc.function.name,
             input: JSON.parse(tc.function.arguments),
@@ -198,10 +201,14 @@ export class ToolCaller {
       }
 
       // No tool calls
+      const responseText = message.content || '';
       return {
-        response: message.content,
+        response: responseText || 'I understand your request.',
         toolsUsed: [],
-        usage: response.usage,
+        usage: {
+          promptTokens: response.usage?.prompt_tokens || 0,
+          completionTokens: response.usage?.completion_tokens || 0,
+        },
       };
     } catch (error) {
       log.error(error, 'GPT-4 tool calling failed');

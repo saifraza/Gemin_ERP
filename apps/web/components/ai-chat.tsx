@@ -74,11 +74,14 @@ export function AIChat() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Throw error with details from server
+        const error: any = new Error(data.error || 'Failed to get response');
+        error.response = { data };
+        throw error;
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -91,12 +94,29 @@ export function AIChat() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Chat error:', error);
+      
+      // Extract error details from response
+      let errorContent = 'Sorry, I encountered an error. Please try again.';
+      
+      if (error.message) {
+        errorContent = error.message;
+      } else if (error.response?.data?.message) {
+        errorContent = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorContent = error.response.data.error;
+      }
+      
+      // Check if it's an API key configuration error
+      if (error.response?.data?.type === 'configuration') {
+        errorContent = `Configuration Error: ${error.response.data.message || 'API key not configured'}. Please check Railway environment variables.`;
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: errorContent,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);

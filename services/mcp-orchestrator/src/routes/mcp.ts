@@ -8,14 +8,38 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
   routes.post('/chat', async (c) => {
     try {
       const { prompt, context, model } = await c.req.json();
+      
+      console.log('Chat request:', { model, promptLength: prompt?.length });
+      
       const response = await llmRouter.chat({ 
         prompt, 
         context,
         model: model || 'auto'
       });
+      
+      // Ensure response has required structure
+      if (!response || typeof response.response !== 'string') {
+        console.error('Invalid response structure:', response);
+        return c.json({ 
+          error: 'Invalid response from LLM',
+          details: 'Response missing or invalid format'
+        }, 500);
+      }
+      
       return c.json(response);
     } catch (error) {
-      return c.json({ error: 'Failed to process chat request' }, 500);
+      console.error('Chat error details:', error);
+      
+      // Provide more detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('configured');
+      
+      return c.json({ 
+        error: 'Failed to process chat request',
+        message: errorMessage,
+        type: isApiKeyError ? 'configuration' : 'processing',
+        details: isApiKeyError ? 'Please check your API keys in Railway environment' : undefined
+      }, 500);
     }
   });
   
