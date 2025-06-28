@@ -19,32 +19,83 @@ const log = pino({ name: 'core-api' });
 // Initialize services
 export const prisma = new PrismaClient();
 
-// Initialize Redis with lazy connection
-let redis: Redis | null = null;
+// Initialize Redis with proper error handling
+let redisInstance: Redis | null = null;
+let redisConnecting = false;
 
-function getRedis(): Redis {
-  if (!redis) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      log.error('REDIS_URL environment variable is not set');
-      throw new Error('REDIS_URL is required');
-    }
-    log.info(`Connecting to Redis at: ${redisUrl.replace(/:[^:@]*@/, ':****@')}`);
-    redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryStrategy: (times) => {
-        log.warn(`Redis connection attempt ${times}`);
-        return Math.min(times * 50, 2000);
-      },
-      lazyConnect: true
-    });
-    redis.on('error', (err) => log.error('Redis error:', err));
-    redis.on('connect', () => log.info('Redis connected successfully'));
+async function connectRedis(): Promise<Redis | null> {
+  if (redisInstance && redisInstance.status === 'ready') {
+    return redisInstance;
   }
-  return redis;
+
+  if (redisConnecting) {
+    return null; // Already trying to connect
+  }
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    log.warn('REDIS_URL environment variable is not set - running without Redis');
+    return null;
+  }
+
+  redisConnecting = true;
+  
+  try {
+    log.info(`Attempting to connect to Redis...`);
+    redisInstance = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
+      retryStrategy: (times) => {
+        if (times > 10) {
+          log.error('Redis connection failed after 10 attempts');
+          return null;
+        }
+        const delay = Math.min(times * 50, 2000);
+        log.warn(`Redis connection attempt ${times} - retrying in ${delay}ms`);
+        return delay;
+      },
+      reconnectOnError: (err) => {
+        log.error('Redis reconnect error:', err.message);
+        return false;
+      }
+    });
+
+    redisInstance.on('error', (err) => {
+      log.error('Redis error:', err.message);
+    });
+
+    redisInstance.on('connect', () => {
+      log.info('Redis connected successfully');
+      redisConnecting = false;
+    });
+
+    redisInstance.on('close', () => {
+      log.warn('Redis connection closed');
+      redisConnecting = false;
+    });
+
+    // Try to connect with timeout
+    await Promise.race([
+      redisInstance.connect(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+      )
+    ]);
+
+    return redisInstance;
+  } catch (error) {
+    log.error('Failed to connect to Redis:', error.message);
+    redisConnecting = false;
+    if (redisInstance) {
+      redisInstance.disconnect();
+      redisInstance = null;
+    }
+    return null;
+  }
 }
 
-export { getRedis as redis };
+// Export a function that returns Redis instance
+export const redis = () => redisInstance;
 
 const app = new Hono();
 
@@ -92,21 +143,21 @@ app.get('/health', async (c) => {
 
   // Check Redis
   try {
-    const redisInstance = redis();
-    if (redisInstance.status === 'ready') {
-      await redisInstance.ping();
+    const redisInst = redis();
+    if (!redisInst) {
+      health.cache = 'not_initialized';
+      // Don't fail health check if Redis isn't initialized
+    } else if (redisInst.status === 'ready') {
+      await redisInst.ping();
       health.cache = 'connected';
-    } else if (redisInstance.status === 'connect' || redisInstance.status === 'connecting') {
+    } else if (redisInst.status === 'connect' || redisInst.status === 'connecting') {
       health.cache = 'connecting';
-      // Don't mark as degraded while connecting
     } else {
-      health.cache = redisInstance.status;
-      health.status = 'degraded';
+      health.cache = redisInst.status;
     }
   } catch (error) {
     health.cache = 'error';
-    health.status = 'degraded';
-    log.error('Redis health check failed:', error);
+    log.error('Redis health check failed:', error.message);
   }
 
   // Return appropriate status code
@@ -138,15 +189,26 @@ serve({
   hostname: '0.0.0.0', // Important for Railway!
 }, (info) => {
   log.info(`Core API running on http://0.0.0.0:${info.port}`);
+  
+  // Try to connect to Redis after server starts
+  setTimeout(async () => {
+    log.info('Attempting to connect to Redis...');
+    const redisConnection = await connectRedis();
+    if (redisConnection) {
+      log.info('Redis connection established');
+    } else {
+      log.warn('Running without Redis - some features may be limited');
+    }
+  }, 1000);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   log.info('Shutting down gracefully...');
   await prisma.$disconnect();
-  if (redis) {
-    const redisInstance = redis();
-    redisInstance.disconnect();
+  const redisInst = redis();
+  if (redisInst) {
+    redisInst.disconnect();
   }
   process.exit(0);
 });
