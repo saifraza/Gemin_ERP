@@ -22,9 +22,12 @@ export function TopHeader({
   userId = "SJ2847"
 }: TopHeaderProps) {
   const [serverStatus, setServerStatus] = useState({ server: 'PROD-01', responseTime: 87 });
-  const [lastSync, setLastSync] = useState(new Date());
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Initialize on client side only
+    setLastSync(new Date());
+    
     // Update last sync time every second
     const interval = setInterval(() => {
       setLastSync(new Date());
@@ -49,7 +52,7 @@ export function TopHeader({
       
       <div className="flex items-center gap-8 text-xs">
         <div>Server: {serverStatus.server} | Response: {serverStatus.responseTime}ms</div>
-        <div>Last Sync: {lastSync.toTimeString().slice(0, 8)}</div>
+        <div>Last Sync: {lastSync ? lastSync.toTimeString().slice(0, 8) : '--:--:--'}</div>
       </div>
       
       <div className="flex items-center gap-3">

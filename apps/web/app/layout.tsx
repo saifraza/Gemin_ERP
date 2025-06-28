@@ -4,7 +4,6 @@ import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'sonner';
 import { CommandPalette } from '@/components/command-palette';
-import { RealtimeStatus } from '@/components/realtime-status';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -31,7 +30,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <div className="relative min-h-screen bg-background">
-            <RealtimeStatus />
             {children}
             <CommandPalette />
             <Toaster position="bottom-right" richColors />
