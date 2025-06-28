@@ -1,39 +1,26 @@
 import { useEffect, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
 
+// Temporary implementation that doesn't use WebSocket
+// This prevents errors while we set up the backend
 export function useWebSocket() {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
-    const newSocket = io(wsUrl, {
-      transports: ['websocket'],
-    });
-
-    newSocket.on('connect', () => {
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    setSocket(newSocket);
+    // Simulate connection for now
+    const timer = setTimeout(() => {
+      setIsConnected(false); // Keep disconnected for now
+    }, 1000);
 
     return () => {
-      newSocket.close();
+      clearTimeout(timer);
     };
   }, []);
 
   const subscribe = useCallback((event: string, handler: (data: any) => void) => {
-    if (!socket) return () => {};
-    
-    socket.on(event, handler);
-    return () => {
-      socket.off(event, handler);
-    };
-  }, [socket]);
+    // Return empty unsubscribe function
+    return () => {};
+  }, []);
 
   return { socket, isConnected, subscribe };
 }
