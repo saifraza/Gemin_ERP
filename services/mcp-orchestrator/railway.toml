@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd ../.. && npx pnpm@8 install --no-frozen-lockfile && npx pnpm@8 build --filter @modern-erp/mcp-orchestrator"
+buildCommand = "npx pnpm@8 install --no-frozen-lockfile && npx pnpm@8 build --filter @modern-erp/mcp-orchestrator"
 
 [deploy]
 startCommand = "cd services/mcp-orchestrator && node dist/index.js"
