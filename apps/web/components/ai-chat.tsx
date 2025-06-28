@@ -140,7 +140,7 @@ export function AIChat() {
             className="bg-gray-800 text-white text-sm rounded px-3 py-1 border border-gray-700"
           >
             <option value="auto">Auto Select</option>
-            <option value="gemini">Gemini Pro ($$)</option>
+            <option value="gemini">Gemini 1.5 Flash ($$)</option>
             <option value="claude">Claude Opus ($$$)</option>
             <option value="gpt4">GPT-4 ($$$)</option>
             <option value="deepseek">DeepSeek ($)</option>

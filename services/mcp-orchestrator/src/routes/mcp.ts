@@ -116,7 +116,7 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
       models: [
         {
           id: 'gemini',
-          name: 'Gemini 1.5 Pro',
+          name: 'Gemini 1.5 Flash',
           provider: 'Google',
           strengths: ['vision', 'multimodal', 'long-context', 'indian-context'],
           costLevel: '$$',

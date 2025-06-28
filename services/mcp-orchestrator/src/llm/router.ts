@@ -223,7 +223,7 @@ export class LLMRouter {
     }
     
     const model = this.gemini.getGenerativeModel({ 
-      model: 'gemini-pro', // Changed from gemini-1.5-pro
+      model: 'gemini-1.5-flash', // Updated to currently available model
       generationConfig: {
         temperature: request.temperature || 0.7,
         maxOutputTokens: request.maxTokens || 8192,
@@ -239,7 +239,7 @@ export class LLMRouter {
     }
     
     return {
-      model: 'gemini-pro',
+      model: 'gemini-1.5-flash',
       response: responseText,
       usage: {
         promptTokens: result.response.usageMetadata?.promptTokenCount || 0,
