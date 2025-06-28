@@ -13,15 +13,11 @@ const ensureProtocol = (url: string) => {
   return url.startsWith('http://') || url.startsWith('https://') ? url : `http://${url}`;
 };
 
-// Service URLs - Use Railway internal URLs when available
-// Railway private networking uses service names without ports
+// Service URLs - Use environment variables provided by Railway
 const services = {
-  core: ensureProtocol(process.env.CORE_API_URL) || 
-    (process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal' : 'http://localhost:3001'),
-  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL) || 
-    (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal' : 'http://localhost:3000'),
-  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL) || 
-    (process.env.RAILWAY_ENVIRONMENT ? 'http://event-processor.railway.internal' : 'http://localhost:3003'),
+  core: ensureProtocol(process.env.CORE_API_URL) || 'http://localhost:3001',
+  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL) || 'http://localhost:3000',
+  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL) || 'http://localhost:3003',
 };
 
 console.log('Service URLs:', services);
