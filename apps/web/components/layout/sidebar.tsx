@@ -1,10 +1,13 @@
 'use client';
 
+import { useRouter, usePathname } from 'next/navigation';
+
 interface SidebarItem {
   id: string;
   label: string;
   badge?: number;
   active?: boolean;
+  href?: string;
 }
 
 interface SidebarSection {
@@ -19,9 +22,17 @@ interface SidebarProps {
 
 const defaultSections: SidebarSection[] = [
   {
+    title: 'Quick Links',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', href: '/dashboard', badge: 5 },
+      { id: 'new-company', label: 'Company Setup', href: '/company/new' },
+      { id: 'test-backend', label: 'Test Backend', href: '/test' },
+    ]
+  },
+  {
     title: 'Favorites',
     items: [
-      { id: 'operations-overview', label: 'Operations Overview', badge: 5, active: true },
+      { id: 'operations-overview', label: 'Operations Overview' },
       { id: 'daily-summary', label: 'Daily Summary' },
       { id: 'team-performance', label: 'Team Performance' },
       { id: 'resource-status', label: 'Resource Status' },
@@ -50,24 +61,37 @@ const defaultSections: SidebarSection[] = [
   }
 ];
 
-export function Sidebar({ activeItem = 'operations-overview', onItemClick }: SidebarProps) {
+export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  
   return (
     <div className="sidebar">
       {defaultSections.map((section) => (
         <div key={section.title} className="sidebar-section">
           <div className="sidebar-title">{section.title}</div>
-          {section.items.map((item) => (
-            <div
-              key={item.id}
-              className={`sidebar-item ${(item.active || activeItem === item.id) ? 'active' : ''}`}
-              onClick={() => onItemClick?.(item.id)}
-            >
-              <span>{item.label}</span>
-              {item.badge && (
-                <span className="sidebar-badge">{item.badge}</span>
-              )}
-            </div>
-          ))}
+          {section.items.map((item) => {
+            const isActive = item.href ? pathname === item.href : activeItem === item.id;
+            
+            return (
+              <div
+                key={item.id}
+                className={`sidebar-item ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  if (item.href) {
+                    router.push(item.href);
+                  } else {
+                    onItemClick?.(item.id);
+                  }
+                }}
+              >
+                <span>{item.label}</span>
+                {item.badge && (
+                  <span className="sidebar-badge">{item.badge}</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
