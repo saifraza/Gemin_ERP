@@ -54,10 +54,57 @@ const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 );
 
+// CORS configuration
+const getAllowedOrigins = () => {
+  const origins = [];
+  
+  // Add configured origins
+  if (process.env.ALLOWED_ORIGINS) {
+    origins.push(...process.env.ALLOWED_ORIGINS.split(','));
+  }
+  
+  // Always allow localhost for development
+  origins.push('http://localhost:3000');
+  
+  // Add common Railway domains
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    origins.push(
+      'https://web-production-66cf.up.railway.app',
+      'https://*.up.railway.app'
+    );
+  }
+  
+  return origins;
+};
+
 // Middleware
 app.use('*', cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    
+    // Check if origin is allowed
+    if (allowedOrigins.some(allowed => {
+      if (allowed.includes('*')) {
+        // Handle wildcard domains
+        const pattern = allowed.replace(/\*/g, '.*');
+        return new RegExp(pattern).test(origin);
+      }
+      return allowed === origin;
+    })) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
 app.use('*', logger());
 
