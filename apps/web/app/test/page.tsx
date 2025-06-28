@@ -23,7 +23,7 @@ export default function TestPage() {
 
   const checkService = async (index: number) => {
     const service = services[index];
-    const apiUrl = process.env.VITE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     
     try {
       const response = await fetch(`${apiUrl}${service.endpoint}`);
@@ -202,7 +202,7 @@ export default function TestPage() {
             <div className="space-y-2 text-sm">
               <div>
                 <span className="text-gray-400">API URL:</span>{' '}
-                <span className="font-mono">{process.env.VITE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}</span>
+                <span className="font-mono">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}</span>
               </div>
               <div>
                 <span className="text-gray-400">Environment:</span>{' '}
