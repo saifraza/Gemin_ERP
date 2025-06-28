@@ -15,12 +15,27 @@ const prisma = new PrismaClient();
 const cache = new PostgreSQLCache(prisma);
 const rateLimiter = new PostgreSQLRateLimiter(cache);
 
-// Service URLs
+// Initialize database connection lazily
+let dbConnected = false;
+async function ensureDbConnection() {
+  if (!dbConnected) {
+    try {
+      await prisma.$connect();
+      dbConnected = true;
+      log.info('Database connected');
+    } catch (error) {
+      log.error('Database connection failed:', error);
+      throw error;
+    }
+  }
+}
+
+// Service URLs - Use Railway internal URLs when available
 const services = {
-  core: process.env.CORE_API_URL || 'http://localhost:3001',
-  mcp: process.env.MCP_ORCHESTRATOR_URL || 'http://localhost:3000',
-  factory: process.env.FACTORY_API_URL || 'http://localhost:3002',
-  analytics: process.env.ANALYTICS_API_URL || 'http://localhost:3003',
+  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal:3001' : 'http://localhost:3001'),
+  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal:3000' : 'http://localhost:3000'),
+  factory: process.env.FACTORY_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://factory-api.railway.internal:3002' : 'http://localhost:3002'),
+  analytics: process.env.ANALYTICS_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://analytics-api.railway.internal:3003' : 'http://localhost:3003'),
 };
 
 const app = new Hono();
@@ -124,6 +139,7 @@ app.get('/health', async (c) => {
   
   // Check database
   try {
+    await ensureDbConnection();
     await prisma.$queryRaw`SELECT 1`;
     health.database = 'connected';
   } catch (error) {
