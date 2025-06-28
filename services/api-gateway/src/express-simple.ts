@@ -7,10 +7,17 @@ console.log('Express API Gateway starting...');
 const app = express();
 const port = parseInt(process.env.PORT || '4000');
 
+// Helper to ensure URL has protocol
+const ensureProtocol = (url: string) => {
+  if (!url) return url;
+  return url.startsWith('http://') || url.startsWith('https://') ? url : `http://${url}`;
+};
+
 // Service URLs - Use Railway internal URLs when available
 const services = {
-  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://dynamic-nourishment.railway.internal' : 'http://localhost:3001'),
-  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal' : 'http://localhost:3000'),
+  core: ensureProtocol(process.env.CORE_API_URL) || (process.env.RAILWAY_ENVIRONMENT ? 'http://dynamic-nourishment.railway.internal' : 'http://localhost:3001'),
+  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL) || (process.env.RAILWAY_ENVIRONMENT ? 'http://energetic-vision.railway.internal' : 'http://localhost:3000'),
+  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL) || (process.env.RAILWAY_ENVIRONMENT ? 'http://incredible-adaptation.railway.internal' : 'http://localhost:3003'),
 };
 
 console.log('Service URLs:', services);
