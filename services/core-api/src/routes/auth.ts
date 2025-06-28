@@ -249,4 +249,61 @@ authRoutes.post('/logout', async (c) => {
   return c.json({ message: 'Logged out successfully' });
 });
 
+// Test endpoint for development
+authRoutes.post('/test-register', async (c) => {
+  const body = await c.req.json();
+  
+  try {
+    // First, ensure we have a test company
+    let testCompany = await prisma.company.findFirst({
+      where: { code: 'TEST001' }
+    });
+    
+    if (!testCompany) {
+      testCompany = await prisma.company.create({
+        data: {
+          name: 'Test Company',
+          code: 'TEST001',
+          address: '123 Test Street',
+          city: 'Test City',
+          state: 'Test State',
+          country: 'Test Country',
+          phone: '+1234567890',
+          email: 'test@company.com',
+        }
+      });
+    }
+    
+    const username = body.username || body.email.split('@')[0];
+    const passwordHash = await bcrypt.hash(body.password, 10);
+    
+    // Create user with test company
+    const user = await prisma.user.create({
+      data: {
+        email: body.email,
+        username,
+        name: body.name,
+        passwordHash,
+        role: 'VIEWER',
+        companyId: testCompany.id,
+      },
+    });
+    
+    return c.json({
+      message: 'Test user created successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        companyId: user.companyId,
+      },
+    });
+  } catch (error) {
+    console.error('Test register error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 export { authRoutes };

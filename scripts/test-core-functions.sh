@@ -79,7 +79,7 @@ TIMESTAMP=$(date +%s)
 TEST_EMAIL="test${TIMESTAMP}@example.com"
 TEST_PASSWORD="TestPassword123!"
 
-register_response=$(curl -s -X POST "$CORE_API/api/auth/register" \
+register_response=$(curl -s -X POST "$CORE_API/api/auth/test-register" \
     -H "Content-Type: application/json" \
     -d "{
         \"email\": \"$TEST_EMAIL\",
