@@ -276,6 +276,23 @@ app.get('/', (c) => {
   });
 });
 
+// Service health check endpoint
+app.get('/health/services', async (c) => {
+  const healthChecks = await Promise.allSettled([
+    fetch(`${services.core}/health`).then(r => ({ core: r.ok })).catch(() => ({ core: false })),
+    fetch(`${services.mcp}/health`).then(r => ({ mcp: r.ok })).catch(() => ({ mcp: false })),
+  ]);
+  
+  return c.json({
+    services: {
+      core: healthChecks[0].status === 'fulfilled' ? healthChecks[0].value.core : false,
+      mcp: healthChecks[1].status === 'fulfilled' ? healthChecks[1].value.mcp : false,
+    },
+    urls: services,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Forward auth routes
 app.all('/api/auth/*', async (c) => {
   const path = c.req.path.replace('/api/auth', '');
@@ -335,10 +352,12 @@ app.all('/api/*', async (c) => {
     if (!response.ok && !contentType.includes('application/json')) {
       // If service returned HTML error page, convert to JSON
       log.error(`Service returned non-JSON error: ${response.status} from ${url}`);
+      log.error(`Response body: ${data.substring(0, 200)}`);
       return c.json({ 
         error: 'Service error',
         message: `Service returned ${response.status} error`,
-        details: serviceUrl ? `Check if ${serviceUrl} is running` : 'Service not configured'
+        details: serviceUrl ? `Check if ${serviceUrl} is running` : 'Service not configured',
+        responsePreview: data.substring(0, 100)
       }, response.status);
     }
     
@@ -357,10 +376,25 @@ app.all('/api/*', async (c) => {
   } catch (error) {
     log.error('Service forward failed:', error);
     log.error(`Failed to forward to ${url}`);
+    
+    // Check if it's a connection error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    let errorDetails = 'Service connection failed';
+    
+    if (errorMessage.includes('ECONNREFUSED')) {
+      errorDetails = 'Service is not running or not accessible';
+    } else if (errorMessage.includes('ETIMEDOUT')) {
+      errorDetails = 'Service request timed out';
+    } else if (errorMessage.includes('ENOTFOUND')) {
+      errorDetails = 'Service hostname not found';
+    }
+    
     return c.json({ 
       error: 'Service unavailable',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      service: serviceUrl || 'unknown'
+      message: errorMessage,
+      service: serviceUrl || 'unknown',
+      url: url,
+      details: errorDetails
     }, 503);
   }
 });

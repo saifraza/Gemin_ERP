@@ -6,15 +6,17 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
   const routes = new Hono();
   
   routes.post('/chat', async (c) => {
+    let requestedModel = 'unknown';
     try {
       const { prompt, context, model } = await c.req.json();
+      requestedModel = model || 'auto';
       
-      console.log('Chat request:', { model, promptLength: prompt?.length });
+      console.log('Chat request:', { model: requestedModel, promptLength: prompt?.length });
       
       const response = await llmRouter.chat({ 
         prompt, 
         context,
-        model: model || 'auto'
+        model: requestedModel
       });
       
       // Ensure response has required structure
@@ -47,6 +49,9 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
       } else if (errorMessage.includes('429') || errorMessage.includes('quota')) {
         errorType = 'rate_limit';
         errorDetails = 'API rate limit exceeded or quota reached.';
+      } else if (errorMessage.includes('402') || errorMessage.includes('Insufficient Balance')) {
+        errorType = 'insufficient_credits';
+        errorDetails = 'API account has insufficient credits. Please add credits to your account.';
       }
       
       return c.json({ 
@@ -54,7 +59,7 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
         message: errorMessage,
         type: errorType,
         details: errorDetails,
-        model: model
+        model: requestedModel
       }, 500);
     }
   });
