@@ -210,4 +210,21 @@ export class LLMRouter {
     
     return JSON.parse(result.response.text());
   }
+
+  async executeTool(toolName: string, args: any): Promise<any> {
+    // Simple tool execution - in production this would call actual tool implementations
+    log.info({ toolName, args }, 'Executing tool');
+    
+    // Mock implementation for now
+    return {
+      toolName,
+      result: {
+        status: 'success',
+        data: {
+          message: `Executed ${toolName} with args: ${JSON.stringify(args)}`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    };
+  }
 }

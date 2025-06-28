@@ -1,12 +1,9 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
-import { setupMCPTools } from './tools/index.js';
 import { EventBus } from './events/event-bus.js';
 import { LLMRouter } from './llm/router.js';
 import { createMCPRoutes } from './routes/mcp.js';
@@ -16,21 +13,6 @@ import pino from 'pino';
 
 const log = pino({ name: 'mcp-orchestrator' });
 
-// Initialize MCP Server for direct MCP protocol connections
-const mcpServer = new Server(
-  {
-    name: 'modern-erp-mcp',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-      resources: {},
-      prompts: {},
-    },
-  }
-);
-
 // Initialize HTTP/WebSocket server for web clients
 const app = new Hono();
 const httpServer = createServer(app.fetch);
@@ -39,7 +21,20 @@ const wss = new WebSocketServer({ server: httpServer });
 // Initialize event bus and LLM router
 const eventBus = new EventBus();
 const llmRouter = new LLMRouter();
-const kafkaConsumer = new KafkaConsumer(eventBus);
+
+// Initialize Kafka consumer with proper error handling
+let kafkaConsumer: KafkaConsumer | null = null;
+
+async function initializeKafkaConsumer() {
+  try {
+    kafkaConsumer = new KafkaConsumer(eventBus);
+    await kafkaConsumer.start();
+    log.info('Kafka consumer started successfully');
+  } catch (error) {
+    log.error('Failed to start Kafka consumer, continuing without it:', error);
+    // Continue running without Kafka - not critical for basic operation
+  }
+}
 
 // Middleware
 app.use('*', cors());
@@ -48,74 +43,67 @@ app.use('*', logger());
 // Health check
 app.get('/health', (c) => c.json({ status: 'healthy', service: 'mcp-orchestrator' }));
 
-// Setup routes
-app.route('/api/mcp', createMCPRoutes(mcpServer, llmRouter, eventBus));
+// Mount routes
+app.route('/api/mcp', createMCPRoutes(llmRouter, eventBus));
 app.route('/api/events', createEventRoutes(eventBus));
 
-// WebSocket handling for real-time AI interactions
+// WebSocket handling
 wss.on('connection', (ws) => {
-  log.info('New WebSocket connection');
+  log.info('WebSocket client connected');
   
-  ws.on('message', async (data) => {
+  // Subscribe to events
+  const unsubscribe = eventBus.subscribe('*', (event) => {
+    ws.send(JSON.stringify(event));
+  });
+  
+  ws.on('message', async (message) => {
     try {
-      const message = JSON.parse(data.toString());
+      const data = JSON.parse(message.toString());
       
-      // Handle different message types
-      switch (message.type) {
-        case 'chat':
-          const response = await llmRouter.chat(message.payload);
-          ws.send(JSON.stringify({ type: 'response', data: response }));
-          break;
-          
-        case 'tool':
-          const toolResult = await mcpServer.handleToolCall(message.payload);
-          ws.send(JSON.stringify({ type: 'tool_result', data: toolResult }));
-          break;
-          
-        case 'subscribe':
-          eventBus.subscribe(message.channel, (event) => {
-            ws.send(JSON.stringify({ type: 'event', data: event }));
-          });
-          break;
+      if (data.type === 'subscribe') {
+        // Handle subscription requests
+        log.info(`Client subscribed to: ${data.topic}`);
+      } else if (data.type === 'tool') {
+        // Handle tool execution requests
+        const result = await llmRouter.executeTool(data.tool, data.arguments);
+        ws.send(JSON.stringify({ type: 'tool_result', result }));
       }
     } catch (error) {
-      log.error(error, 'WebSocket message handling error');
-      ws.send(JSON.stringify({ type: 'error', message: error.message }));
+      log.error('WebSocket message error:', error);
+      ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
     }
+  });
+  
+  ws.on('close', () => {
+    log.info('WebSocket client disconnected');
+    unsubscribe();
   });
 });
 
-// Setup MCP tools
-setupMCPTools(mcpServer);
+// Start servers
+const PORT = process.env.PORT || 3001;
+const WS_PORT = process.env.WS_PORT || 3002;
 
-// Start services
-async function start() {
-  // Start MCP server (for direct MCP protocol connections)
-  if (process.env.MCP_TRANSPORT === 'stdio') {
-    const transport = new StdioServerTransport();
-    await mcpServer.connect(transport);
-    log.info('MCP Server started with stdio transport');
-  }
+httpServer.listen(PORT, () => {
+  log.info(`MCP Orchestrator running on http://localhost:${PORT}`);
+  log.info(`WebSocket server running on ws://localhost:${PORT}`);
   
-  // Start Kafka consumer
-  await kafkaConsumer.start();
-  
-  // Start HTTP/WebSocket server
-  const port = process.env.PORT || 3000;
-  httpServer.listen(port, () => {
-    log.info(`MCP Orchestrator running on http://localhost:${port}`);
+  // Initialize Kafka consumer after server starts
+  initializeKafkaConsumer().catch(error => {
+    log.error('Error initializing Kafka consumer:', error);
   });
-}
+});
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  log.info('Shutting down gracefully...');
-  await kafkaConsumer.stop();
-  httpServer.close();
-  process.exit(0);
-});
-
-start().catch((error) => {
-  log.error(error, 'Failed to start MCP Orchestrator');
-  process.exit(1);
+  log.info('SIGTERM received, shutting down gracefully');
+  
+  if (kafkaConsumer) {
+    await kafkaConsumer.stop();
+  }
+  
+  httpServer.close(() => {
+    log.info('HTTP server closed');
+    process.exit(0);
+  });
 });

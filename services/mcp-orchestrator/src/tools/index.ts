@@ -1,4 +1,5 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { factoryTools } from './factory-tools.js';
 import { procurementTools } from './procurement-tools.js';
 import { analyticsTools } from './analytics-tools.js';
@@ -17,8 +18,32 @@ export function setupMCPTools(server: Server) {
     ...voiceTools,
   ];
 
-  allTools.forEach((tool) => {
-    server.setRequestHandler(tool.handler);
+  // Create a map of tools for easy lookup
+  const toolsMap = new Map(allTools.map(tool => [tool.name, tool]));
+
+  // Handle list tools request
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: allTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      })),
+    };
+  });
+
+  // Handle call tool request
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const tool = toolsMap.get(request.params.name);
+    if (!tool) {
+      throw new Error(`Tool not found: ${request.params.name}`);
+    }
+    
+    const result = await tool.handler({
+      arguments: request.params.arguments || {},
+    });
+    
+    return result;
   });
 
   // Log registered tools
