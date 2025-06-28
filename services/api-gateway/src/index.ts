@@ -126,7 +126,15 @@ const authMiddleware = async (c: any, next: any) => {
   }
 };
 
-app.use('/api/*', authMiddleware);
+// Apply auth middleware only to protected routes
+app.use('/api/*', async (c, next) => {
+  // Skip auth for health checks and auth endpoints
+  const path = c.req.path;
+  if (path.includes('/health') || path.startsWith('/api/auth/')) {
+    return next();
+  }
+  return authMiddleware(c, next);
+});
 
 // Health check
 app.get('/health', async (c) => {
@@ -171,10 +179,29 @@ app.get('/health', async (c) => {
   return c.json(health);
 });
 
+// WebSocket endpoint
+app.get('/ws', (c) => {
+  return c.text('WebSocket endpoint. Connect using ws:// protocol.', 426);
+});
+
 // Proxy routes
 app.all('/api/auth/*', async (c) => {
   const path = c.req.path.replace('/api/auth', '');
   const res = await fetch(`${services.core}/api/auth${path}`, {
+    method: c.req.method,
+    headers: c.req.header(),
+    body: c.req.method !== 'GET' ? await c.req.text() : undefined,
+  });
+  
+  return new Response(res.body, {
+    status: res.status,
+    headers: res.headers,
+  });
+});
+
+app.all('/api/core/*', async (c) => {
+  const path = c.req.path.replace('/api/core', '');
+  const res = await fetch(`${services.core}${path}`, {
     method: c.req.method,
     headers: c.req.header(),
     body: c.req.method !== 'GET' ? await c.req.text() : undefined,
