@@ -49,6 +49,46 @@ app.get('/', (req, res) => {
   });
 });
 
+// Test internal connectivity
+app.get('/test-services', async (req, res) => {
+  const results = {};
+  
+  for (const [name, url] of Object.entries(services)) {
+    try {
+      console.log(`Testing ${name} at ${url}`);
+      const response = await fetch(`${url}/health`, { 
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(5000)
+      });
+      results[name] = {
+        url,
+        status: response.status,
+        ok: response.ok,
+        data: await response.text()
+      };
+    } catch (error: any) {
+      results[name] = {
+        url,
+        error: error.message,
+        type: error.constructor.name
+      };
+    }
+  }
+  
+  res.json({
+    services: results,
+    environment: {
+      RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
+      NODE_ENV: process.env.NODE_ENV,
+      configured: {
+        CORE_API_URL: process.env.CORE_API_URL,
+        MCP_ORCHESTRATOR_URL: process.env.MCP_ORCHESTRATOR_URL
+      }
+    }
+  });
+});
+
 // Proxy all /api/* requests
 app.all('/api/*', async (req, res) => {
   const path = req.path;
@@ -84,9 +124,16 @@ app.all('/api/*', async (req, res) => {
     });
     
     res.send(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Proxy error:', error);
-    res.status(503).json({ error: 'Service unavailable' });
+    console.error('Failed to reach:', targetUrl);
+    console.error('Error details:', error.message);
+    res.status(503).json({ 
+      error: 'Service unavailable',
+      service: serviceUrl,
+      target: targetUrl,
+      message: error.message
+    });
   }
 });
 
