@@ -258,17 +258,20 @@ authRoutes.post('/logout', async (c) => {
   return c.json({ message: 'Logged out successfully' });
 });
 
-// Test endpoint for development
+// Test endpoint for development (v2 - fixed address field)
 authRoutes.post('/test-register', async (c) => {
   const body = await c.req.json();
   
   try {
+    console.log('Test register endpoint v2 - using JSON address field');
+    
     // First, ensure we have a test company
     let testCompany = await prisma.company.findFirst({
       where: { code: 'TEST001' }
     });
     
     if (!testCompany) {
+      console.log('Creating test company with JSON address...');
       testCompany = await prisma.company.create({
         data: {
           name: 'Test Company',
@@ -284,6 +287,7 @@ authRoutes.post('/test-register', async (c) => {
           email: 'test@company.com',
         }
       });
+      console.log('Test company created successfully');
     }
     
     const username = body.username || body.email.split('@')[0];
