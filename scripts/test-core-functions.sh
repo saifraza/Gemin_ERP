@@ -166,6 +166,38 @@ else
     print_result 1 "Company retrieval"
 fi
 
+# First create a factory for division
+echo "Creating test factory..."
+factory_response=$(curl -s -X POST "$CORE_API/api/factories" \
+    -H "Authorization: Bearer $JWT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"name\": \"Test Factory $TIMESTAMP\",
+        \"code\": \"TF$TIMESTAMP\",
+        \"type\": \"INTEGRATED\",
+        \"companyId\": \"$COMPANY_ID\",
+        \"location\": {
+            \"address\": \"456 Factory Road\",
+            \"city\": \"Test City\",
+            \"state\": \"Test State\",
+            \"country\": \"Test Country\",
+            \"postalCode\": \"54321\",
+            \"coordinates\": {
+                \"latitude\": 25.0,
+                \"longitude\": 75.0
+            }
+        },
+        \"crushingCapacity\": 5000
+    }")
+
+if echo "$factory_response" | grep -q "id"; then
+    FACTORY_ID=$(get_json_value "$factory_response" "id")
+    echo "Factory created with ID: $FACTORY_ID"
+else
+    echo "Factory creation failed, using test company ID as fallback"
+    FACTORY_ID="$COMPANY_ID"
+fi
+
 # Test division creation
 echo "Testing division creation..."
 division_response=$(curl -s -X POST "$CORE_API/api/divisions" \
@@ -175,7 +207,7 @@ division_response=$(curl -s -X POST "$CORE_API/api/divisions" \
         \"name\": \"Test Division $TIMESTAMP\",
         \"code\": \"TD$TIMESTAMP\",
         \"type\": \"SUGAR\",
-        \"companyId\": \"$COMPANY_ID\"
+        \"factoryId\": \"$FACTORY_ID\"
     }")
 
 if echo "$division_response" | grep -q "id"; then
