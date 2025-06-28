@@ -42,6 +42,9 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+      },
     },
   },
   plugins: [],
