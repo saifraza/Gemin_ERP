@@ -46,6 +46,13 @@ export class LLMRouter {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
     this.toolCaller = new ToolCaller();
     this.tokenOptimizer = new TokenOptimizer();
+    
+    // Log which API keys are configured
+    log.info({
+      hasGemini: !!process.env.GEMINI_API_KEY,
+      hasClaude: !!process.env.ANTHROPIC_API_KEY,
+      hasOpenAI: !!process.env.OPENAI_API_KEY,
+    }, 'API keys configured');
   }
 
   async chat(request: LLMRequest): Promise<any> {
@@ -68,15 +75,23 @@ export class LLMRouter {
       let result;
       
       // Check if we should use tools based on the query
-      if (this.shouldUseTools(request.prompt)) {
+      if (this.shouldUseTools(request.prompt) && model !== 'gemini') {
         // Use tool-enabled models (Claude or GPT-4)
-        if (model === 'claude' || (model === 'auto' && this.preferClaudeForTools(request))) {
+        // Respect user's model choice if they specifically selected one
+        if (model === 'claude') {
           result = await this.toolCaller.callWithClaude(request.prompt, request.context);
-        } else {
+        } else if (model === 'gpt4') {
           result = await this.toolCaller.callWithGPT4(request.prompt, request.context);
+        } else if (model === 'auto') {
+          // Only in auto mode, decide which tool-enabled model to use
+          if (this.preferClaudeForTools(request)) {
+            result = await this.toolCaller.callWithClaude(request.prompt, request.context);
+          } else {
+            result = await this.toolCaller.callWithGPT4(request.prompt, request.context);
+          }
         }
       } else {
-        // Regular chat without tools
+        // Regular chat without tools (or Gemini with tools disabled)
         switch (model) {
           case 'gemini':
             result = await this.chatWithGemini(request);
@@ -147,6 +162,10 @@ export class LLMRouter {
   }
 
   private async chatWithGemini(request: LLMRequest) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured. Please add GEMINI_API_KEY to environment variables.');
+    }
+    
     const model = this.gemini.getGenerativeModel({ 
       model: 'gemini-1.5-pro',
       generationConfig: {
@@ -169,6 +188,10 @@ export class LLMRouter {
   }
 
   private async chatWithClaude(request: LLMRequest) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('Claude API key not configured. Please add ANTHROPIC_API_KEY to environment variables.');
+    }
+    
     const response = await this.anthropic.messages.create({
       model: 'claude-3-opus-20240229',
       max_tokens: request.maxTokens || 4096,
@@ -192,6 +215,10 @@ export class LLMRouter {
   }
 
   private async chatWithGPT(request: LLMRequest) {
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your-openai-api-key-here') {
+      throw new Error('OpenAI API key not configured. Please add OPENAI_API_KEY to Railway environment variables.');
+    }
+    
     const completion = await this.openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [
