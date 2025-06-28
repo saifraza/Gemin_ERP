@@ -47,13 +47,14 @@ export class LLMRouter {
   };
 
   constructor() {
-    this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+    // Initialize with empty API keys to prevent constructor errors
+    this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-key');
+    this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'dummy-key' });
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'dummy-key' });
     
     // DeepSeek uses OpenAI-compatible API
     this.deepseek = new OpenAI({
-      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      apiKey: process.env.DEEPSEEK_API_KEY || 'dummy-key',
       baseURL: 'https://api.deepseek.com/v1',
     });
     
@@ -61,15 +62,34 @@ export class LLMRouter {
     this.tokenOptimizer = new TokenOptimizer();
     
     // Log which API keys are configured
-    log.info({
-      hasGemini: !!process.env.GEMINI_API_KEY,
-      hasClaude: !!process.env.ANTHROPIC_API_KEY,
-      hasOpenAI: !!process.env.OPENAI_API_KEY,
-      hasDeepSeek: !!process.env.DEEPSEEK_API_KEY,
-    }, 'API keys configured');
+    const apiKeyStatus = {
+      hasGemini: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key-here',
+      hasClaude: !!process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your-anthropic-api-key-here',
+      hasOpenAI: !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key-here',
+      hasDeepSeek: !!process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'your-deepseek-api-key-here',
+    };
+    
+    log.info(apiKeyStatus, 'API keys configured');
+    
+    // Warn if no API keys are configured
+    if (!apiKeyStatus.hasGemini && !apiKeyStatus.hasClaude && !apiKeyStatus.hasOpenAI && !apiKeyStatus.hasDeepSeek) {
+      log.error('WARNING: No valid API keys configured. AI chat will not work.');
+    }
   }
 
   async chat(request: LLMRequest): Promise<any> {
+    // Check if at least one API key is configured
+    const hasValidKey = (
+      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your-gemini-api-key-here') ||
+      (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your-anthropic-api-key-here') ||
+      (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'your-openai-api-key-here') ||
+      (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== 'your-deepseek-api-key-here')
+    );
+    
+    if (!hasValidKey) {
+      throw new Error('No AI API keys configured. Please add at least one API key (GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or DEEPSEEK_API_KEY) to Railway environment variables.');
+    }
+    
     const model = request.model === 'auto' ? this.selectBestModel(request) : request.model;
     
     // Optimize the prompt and context
