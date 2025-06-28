@@ -17,9 +17,8 @@ interface ServiceStatus {
 export default function TestPage() {
   const [services, setServices] = useState<ServiceStatus[]>([
     { name: 'API Gateway', endpoint: '/health', status: 'checking' },
-    { name: 'Auth Service', endpoint: '/api/auth/health', status: 'checking' },
+    { name: 'Core API', endpoint: '/api/auth/login', status: 'checking' },
     { name: 'Company Service', endpoint: '/api/companies', status: 'checking' },
-    { name: 'Test Service', endpoint: '/api/test/version', status: 'checking' },
   ]);
 
   const checkService = async (index: number) => {

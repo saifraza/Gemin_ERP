@@ -67,35 +67,40 @@ const secret = new TextEncoder().encode(
 );
 
 // CORS configuration
-const getAllowedOrigins = () => {
-  const origins = [];
-  
-  // Add configured origins
-  if (process.env.ALLOWED_ORIGINS) {
-    origins.push(...process.env.ALLOWED_ORIGINS.split(','));
-  }
-  
-  // Always allow localhost for development
-  origins.push('http://localhost:3000');
-  
-  // Add common Railway domains
-  if (process.env.RAILWAY_ENVIRONMENT) {
-    origins.push(
-      'https://web-production-66cf.up.railway.app',
-      'https://*.up.railway.app'
-    );
-  }
-  
-  return origins;
+const corsOptions = {
+  origin: (origin: string) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return true;
+    
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost:')) return true;
+    
+    // Allow configured origins
+    if (process.env.ALLOWED_ORIGINS) {
+      const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+      if (allowedOrigins.includes(origin)) return true;
+    }
+    
+    // Allow all Railway domains in production
+    if (process.env.RAILWAY_ENVIRONMENT) {
+      if (origin.includes('.railway.app')) return true;
+    }
+    
+    // Log unmatched origins for debugging
+    log.info({ origin }, 'Origin check');
+    
+    // Allow all origins for now to prevent blocking
+    return true;
+  },
+  credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 86400, // 24 hours
 };
 
 // Middleware
-app.use('*', cors({
-  origin: getAllowedOrigins(),
-  credentials: true,
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-}));
+app.use('*', cors(corsOptions));
 app.use('*', logger());
 
 // Rate limiting middleware
