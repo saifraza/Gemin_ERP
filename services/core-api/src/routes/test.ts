@@ -1,59 +1,56 @@
 import { Hono } from 'hono';
-import { redis } from '../index.js';
+import { cache } from '../index.js';
 
 const testRoutes = new Hono();
 
 // Simple test endpoint to verify deployment
 testRoutes.get('/version', (c) => {
   return c.json({ 
-    version: '1.0.1',
-    message: 'Core API with fixed address field',
+    version: '1.0.2',
+    message: 'Core API with PostgreSQL cache',
     timestamp: new Date().toISOString(),
     features: {
       addressField: 'JSON format',
-      redisHandling: 'Graceful fallback',
+      cacheSystem: 'PostgreSQL-based',
       authEndpoints: ['login', 'register', 'test-register', 'verify', 'logout']
     }
   });
 });
 
-// Redis debug endpoint
-testRoutes.get('/redis-debug', async (c) => {
-  const redisUrl = process.env.REDIS_URL;
-  const redisInfo = {
-    hasUrl: !!redisUrl,
-    urlFormat: redisUrl ? redisUrl.substring(0, 20) + '...' : 'not set',
-    urlProtocol: redisUrl ? new URL(redisUrl).protocol : 'N/A',
-    urlHost: redisUrl ? new URL(redisUrl).hostname : 'N/A',
-    urlPort: redisUrl ? new URL(redisUrl).port : 'N/A',
+// Cache debug endpoint
+testRoutes.get('/cache-debug', async (c) => {
+  const cacheInfo = {
+    type: 'PostgreSQL Cache',
+    status: 'active',
   };
   
-  // Try to get Redis instance status
-  const redisInstance = redis();
-  const connectionInfo = {
-    instanceExists: !!redisInstance,
-    status: redisInstance?.status || 'no instance',
-    isReady: redisInstance?.status === 'ready',
-  };
-  
-  // Try a simple ping if connected
-  let pingResult = 'not attempted';
-  if (redisInstance && redisInstance.status === 'ready') {
-    try {
-      pingResult = await redisInstance.ping();
-    } catch (error: any) {
-      pingResult = `error: ${error.message}`;
-    }
+  // Try a simple cache operation
+  let testResult = 'not attempted';
+  try {
+    const testKey = 'test:debug';
+    const testValue = { message: 'Cache test', timestamp: Date.now() };
+    
+    // Set value
+    await cache.set(testKey, testValue, 60);
+    
+    // Get value back
+    const retrieved = await cache.get(testKey);
+    
+    // Clean up
+    await cache.del(testKey);
+    
+    testResult = retrieved ? 'success' : 'failed';
+  } catch (error: any) {
+    testResult = `error: ${error.message}`;
   }
   
   return c.json({
     environment: {
       nodeEnv: process.env.NODE_ENV,
-      hasRedisUrl: !!process.env.REDIS_URL,
+      hasDatabase: !!process.env.DATABASE_URL,
     },
-    redisUrl: redisInfo,
-    connection: connectionInfo,
-    ping: pingResult,
+    cache: cacheInfo,
+    test: testResult,
     timestamp: new Date().toISOString(),
   });
 });
