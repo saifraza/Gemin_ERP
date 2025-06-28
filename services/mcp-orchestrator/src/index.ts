@@ -3,7 +3,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
 import { EventBus } from './events/event-bus.js';
 import { LLMRouter } from './llm/router.js';
 import { createMCPRoutes } from './routes/mcp.js';
@@ -13,10 +12,10 @@ import pino from 'pino';
 
 const log = pino({ name: 'mcp-orchestrator' });
 
-// Initialize HTTP/WebSocket server for web clients
+// Initialize app
 const app = new Hono();
-const httpServer = createServer(app.fetch);
-const wss = new WebSocketServer({ server: httpServer });
+let server: any;
+let wss: WebSocketServer;
 
 // Initialize event bus and LLM router
 const eventBus = new EventBus();
@@ -48,7 +47,12 @@ app.route('/api/mcp', createMCPRoutes(llmRouter, eventBus));
 app.route('/api/events', createEventRoutes(eventBus));
 
 // WebSocket handling
-wss.on('connection', (ws) => {
+function setupWebSocketServer() {
+  if (!server) return;
+  
+  wss = new WebSocketServer({ server });
+  
+  wss.on('connection', (ws) => {
   log.info('WebSocket client connected');
   
   // Subscribe to events
@@ -78,14 +82,19 @@ wss.on('connection', (ws) => {
     log.info('WebSocket client disconnected');
     unsubscribe();
   });
-});
+  });
+}
 
-// Start servers
+// Start server
 const PORT = process.env.PORT || 3001;
-const WS_PORT = process.env.WS_PORT || 3002;
 
-httpServer.listen(PORT, '0.0.0.0', () => {
+server = serve({
+  fetch: app.fetch,
+  port: Number(PORT),
+  hostname: '0.0.0.0',
+}, () => {
   log.info(`MCP Orchestrator running on http://0.0.0.0:${PORT}`);
+  setupWebSocketServer();
   log.info(`WebSocket server running on ws://0.0.0.0:${PORT}`);
   
   // Initialize Kafka consumer after server starts
@@ -102,8 +111,10 @@ process.on('SIGTERM', async () => {
     await kafkaConsumer.stop();
   }
   
-  httpServer.close(() => {
-    log.info('HTTP server closed');
-    process.exit(0);
-  });
+  if (wss) {
+    wss.close();
+  }
+  
+  log.info('Shutdown complete');
+  process.exit(0);
 });
