@@ -63,8 +63,17 @@ export const useAuthStore = create<AuthStore>()(
         // Save token to localStorage and cookie for API calls
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_token', response.token);
-          // Set cookie for middleware
-          document.cookie = `auth_token=${response.token}; path=/; max-age=86400`; // 24 hours
+          // Set cookie for middleware with strict security
+          const isProduction = window.location.protocol === 'https:';
+          const cookieOptions = [
+            `auth_token=${response.token}`,
+            'path=/',
+            'max-age=86400', // 24 hours
+            'SameSite=Strict', // Prevent CSRF and cookie sharing
+            isProduction ? 'Secure' : '', // Only send over HTTPS in production
+          ].filter(Boolean).join('; ');
+          
+          document.cookie = cookieOptions;
         }
       },
 

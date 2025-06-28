@@ -7,47 +7,46 @@ export function middleware(request: NextRequest) {
   // List of public routes that don't require authentication
   const publicRoutes = [
     '/auth/login',
-    '/auth/register',
+    '/auth/register', 
     '/auth/logout',
+    '/force-logout',
     '/setup',
-    '/_next',
-    '/favicon.ico',
   ];
   
-  // API routes have their own authentication
-  if (pathname.startsWith('/api')) {
+  // Static assets don't need auth
+  if (pathname.startsWith('/_next') || 
+      pathname.startsWith('/api') ||
+      pathname === '/favicon.ico' ||
+      pathname.endsWith('.png') ||
+      pathname.endsWith('.jpg') ||
+      pathname.endsWith('.css') ||
+      pathname.endsWith('.js')) {
     return NextResponse.next();
   }
   
   // Check if the current path is a public route
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
   
   if (isPublicRoute) {
     return NextResponse.next();
   }
   
-  // For all other routes, check for auth token
-  // Check localStorage value from the auth store
-  const authStorageCookie = request.cookies.get('auth-storage')?.value;
-  let isAuthenticated = false;
-  
-  if (authStorageCookie) {
-    try {
-      const authData = JSON.parse(authStorageCookie);
-      isAuthenticated = authData?.state?.isAuthenticated || false;
-    } catch (e) {
-      console.error('Failed to parse auth storage:', e);
-    }
-  }
-  
-  // Also check for auth_token cookie
+  // For all other routes, strictly check for auth token
   const token = request.cookies.get('auth_token')?.value;
   
-  // If no authentication found, redirect to login
-  if (!isAuthenticated && !token) {
-    console.log(`Middleware: No auth for ${pathname}, redirecting to login`);
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+  // No token = no access
+  if (!token) {
+    console.log(`Middleware: No auth token for ${pathname}, redirecting to login`);
+    
+    // Clear any stale auth cookies
+    const response = NextResponse.redirect(new URL('/auth/login', request.url));
+    response.cookies.delete('auth-storage');
+    response.cookies.delete('auth_token');
+    
+    return response;
   }
+  
+  // TODO: Optionally verify token validity here
   
   return NextResponse.next();
 }
