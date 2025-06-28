@@ -103,11 +103,19 @@ export default function DashboardPage() {
   const [aiOpen, setAiOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notification, setNotification] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-    }
+    // Check authentication on mount
+    const checkAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token && !isAuthenticated) {
+        router.push('/auth/login');
+      } else {
+        setIsLoading(false);
+      }
+    };
+    checkAuth();
   }, [isAuthenticated, router]);
 
   const showNotification = (message: string) => {
@@ -164,6 +172,16 @@ export default function DashboardPage() {
       render: () => <button className="btn" style={{ padding: '4px 8px', fontSize: '11px' }}>View</button>
     }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-lg text-gray-600">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col">

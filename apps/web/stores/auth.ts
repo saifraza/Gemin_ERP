@@ -43,9 +43,11 @@ export const useAuthStore = create<AuthStore>()(
           companyName: response.user.company?.name || null,
         });
 
-        // Save token to localStorage for API calls
+        // Save token to localStorage and cookie for API calls
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_token', response.token);
+          // Set cookie for middleware
+          document.cookie = `auth_token=${response.token}; path=/; max-age=86400`; // 24 hours
         }
       },
 
@@ -59,6 +61,8 @@ export const useAuthStore = create<AuthStore>()(
         
         if (typeof window !== 'undefined') {
           localStorage.removeItem('auth_token');
+          // Remove cookie
+          document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
         }
       },
 

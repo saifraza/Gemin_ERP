@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const login = useAuthStore((state) => state.login);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -20,12 +21,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await api.login(formData.username, formData.password);
-      
-      // Save token
-      localStorage.setItem('auth_token', result.token);
-      localStorage.setItem('user', JSON.stringify(result.user));
-      
+      await login(formData.username, formData.password);
       toast.success('Login successful!');
       router.push('/dashboard');
     } catch (error: any) {
