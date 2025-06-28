@@ -117,53 +117,93 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
 
 // Register
 authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
-  const data = c.req.valid('json');
-  
-  // Generate username from email if not provided
-  const username = data.username || data.email.split('@')[0];
-  
-  // Check if user exists
-  const existing = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: data.email },
-        { username },
-      ],
-    },
-  });
-  
-  if (existing) {
-    return c.json({ error: 'User already exists' }, 400);
+  try {
+    const data = c.req.valid('json');
+    
+    // Generate username from email if not provided
+    const username = data.username || data.email.split('@')[0];
+    
+    // Check if user exists
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: data.email },
+          { username },
+        ],
+      },
+    });
+    
+    if (existing) {
+      return c.json({ error: 'User already exists' }, 400);
+    }
+    
+    // If no companyId provided, check if there's a default company
+    let companyId = data.companyId;
+    if (!companyId) {
+      // Try to find a default company or create one
+      const defaultCompany = await prisma.company.findFirst({
+        orderBy: { createdAt: 'asc' },
+      });
+      
+      if (!defaultCompany) {
+        // Create a default company if none exists
+        const newCompany = await prisma.company.create({
+          data: {
+            name: 'Default Company',
+            code: 'DEFAULT',
+            address: {
+              street: '123 Main St',
+              city: 'City',
+              state: 'State',
+              country: 'Country',
+              postalCode: '12345',
+            },
+            phone: '+1234567890',
+            email: 'info@company.com',
+          },
+        });
+        companyId = newCompany.id;
+      } else {
+        companyId = defaultCompany.id;
+      }
+    }
+    
+    // Hash password
+    const passwordHash = await bcrypt.hash(data.password, 10);
+    
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email: data.email,
+        username,
+        name: data.name,
+        passwordHash,
+        role: data.role || 'VIEWER',
+        companyId,
+      },
+      include: {
+        company: true,
+      },
+    });
+    
+    return c.json({
+      message: 'User created successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        company: user.company,
+      },
+    });
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return c.json({ 
+      error: 'Registration failed', 
+      details: error.message 
+    }, 500);
   }
-  
-  // Hash password
-  const passwordHash = await bcrypt.hash(data.password, 10);
-  
-  // Create user
-  const user = await prisma.user.create({
-    data: {
-      email: data.email,
-      username,
-      name: data.name,
-      passwordHash,
-      role: data.role || 'VIEWER',
-      companyId: data.companyId,
-    },
-    include: {
-      company: true,
-    },
-  });
-  
-  return c.json({
-    message: 'User created successfully',
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      name: user.name,
-      role: user.role,
-    },
-  });
 });
 
 // Verify token middleware
