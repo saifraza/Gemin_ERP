@@ -20,8 +20,20 @@ export function FactorySelector() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (!user || !allowedFactories.length) {
-    return null;
+  // Debug logging
+  console.log('Factory Selector Debug:', {
+    user,
+    currentFactory,
+    allowedFactories,
+    canAccessAll: canAccessAllFactories()
+  });
+
+  if (!user) {
+    return <div className="text-xs text-gray-400">Loading user...</div>;
+  }
+
+  if (!allowedFactories || allowedFactories.length === 0) {
+    return <div className="text-xs text-gray-400">No factory access</div>;
   }
 
   const currentFactoryName = currentFactory === 'all' 
