@@ -14,10 +14,10 @@ const ensureProtocol = (url: string) => {
 };
 
 // Service URLs - Use Railway internal URLs when available
-// For Railway private networking, the services are available on their assigned PORT
+// Railway private networking uses service names without ports
 const services = {
   core: ensureProtocol(process.env.CORE_API_URL) || 
-    (process.env.RAILWAY_ENVIRONMENT ? 'https://core-api-production-76b9.up.railway.app' : 'http://localhost:3001'),
+    (process.env.RAILWAY_ENVIRONMENT ? 'http://dynamic-nourishment.railway.internal' : 'http://localhost:3001'),
   mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL) || 
     (process.env.RAILWAY_ENVIRONMENT ? 'http://energetic-vision.railway.internal' : 'http://localhost:3000'),
   eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL) || 
