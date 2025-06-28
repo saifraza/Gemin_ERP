@@ -11,6 +11,16 @@ interface Message {
   content: string;
   model?: string;
   timestamp: Date;
+  tokenUsage?: {
+    prompt: number;
+    completion: number;
+    total: number;
+    cost: number;
+  };
+  toolsUsed?: Array<{
+    name: string;
+    input: any;
+  }>;
 }
 
 export function AIChat() {
@@ -76,6 +86,8 @@ export function AIChat() {
         content: data.response,
         model: data.model,
         timestamp: new Date(),
+        tokenUsage: data.tokenUsage,
+        toolsUsed: data.toolsUsed,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -173,6 +185,20 @@ export function AIChat() {
                     <>
                       <span>•</span>
                       <span>{message.model}</span>
+                    </>
+                  )}
+                  {message.tokenUsage && (
+                    <>
+                      <span>•</span>
+                      <span>{message.tokenUsage.total} tokens</span>
+                      <span>•</span>
+                      <span>${message.tokenUsage.cost.toFixed(4)}</span>
+                    </>
+                  )}
+                  {message.toolsUsed && message.toolsUsed.length > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>🔧 {message.toolsUsed.map(t => t.name).join(', ')}</span>
                     </>
                   )}
                 </div>

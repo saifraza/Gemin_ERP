@@ -97,5 +97,14 @@ export function createMCPRoutes(llmRouter: LLMRouter, eventBus: EventBus) {
     });
   });
   
+  // Get token usage statistics
+  routes.get('/usage', (c) => {
+    const stats = llmRouter.getTokenUsageStats();
+    return c.json({
+      usage: stats,
+      timestamp: new Date().toISOString(),
+    });
+  });
+  
   return routes;
 }

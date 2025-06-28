@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { ToolCaller } from './tool-caller.js';
+import { TokenOptimizer } from './token-optimizer.js';
 import pino from 'pino';
 
 const log = pino({ name: 'llm-router' });
@@ -18,6 +20,8 @@ export class LLMRouter {
   private gemini: GoogleGenerativeAI;
   private anthropic: Anthropic;
   private openai: OpenAI;
+  private toolCaller: ToolCaller;
+  private tokenOptimizer: TokenOptimizer;
   private modelCapabilities = {
     gemini: {
       strengths: ['vision', 'multimodal', 'long-context', 'indian-context'],
@@ -40,24 +44,66 @@ export class LLMRouter {
     this.gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
     this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+    this.toolCaller = new ToolCaller();
+    this.tokenOptimizer = new TokenOptimizer();
   }
 
   async chat(request: LLMRequest): Promise<any> {
     const model = request.model === 'auto' ? this.selectBestModel(request) : request.model;
     
-    log.info({ model, prompt: request.prompt.substring(0, 100) }, 'Routing LLM request');
+    // Optimize the prompt and context
+    const optimizedPrompt = this.tokenOptimizer.createOptimizedPrompt(
+      request.prompt,
+      request.context,
+      request.context?.conversationHistory || []
+    );
+    
+    log.info({ 
+      model, 
+      promptTokens: this.tokenOptimizer.countTokens(optimizedPrompt),
+      hasTools: this.shouldUseTools(request.prompt)
+    }, 'Routing LLM request');
 
     try {
-      switch (model) {
-        case 'gemini':
-          return await this.chatWithGemini(request);
-        case 'claude':
-          return await this.chatWithClaude(request);
-        case 'gpt4':
-          return await this.chatWithGPT(request);
-        default:
-          return await this.chatWithGemini(request); // Default fallback
+      let result;
+      
+      // Check if we should use tools based on the query
+      if (this.shouldUseTools(request.prompt)) {
+        // Use tool-enabled models (Claude or GPT-4)
+        if (model === 'claude' || (model === 'auto' && this.preferClaudeForTools(request))) {
+          result = await this.toolCaller.callWithClaude(request.prompt, request.context);
+        } else {
+          result = await this.toolCaller.callWithGPT4(request.prompt, request.context);
+        }
+      } else {
+        // Regular chat without tools
+        switch (model) {
+          case 'gemini':
+            result = await this.chatWithGemini(request);
+            break;
+          case 'claude':
+            result = await this.chatWithClaude(request);
+            break;
+          case 'gpt4':
+            result = await this.chatWithGPT(request);
+            break;
+          default:
+            result = await this.chatWithGemini(request); // Default fallback
+        }
       }
+      
+      // Track token usage
+      if (result.response && result.usage) {
+        const usage = this.tokenOptimizer.calculateUsage(
+          optimizedPrompt,
+          result.response,
+          result.model || model
+        );
+        this.tokenOptimizer.trackUsage(usage);
+        result.tokenUsage = usage;
+      }
+      
+      return result;
     } catch (error) {
       log.error(error, `Failed with ${model}, trying fallback`);
       // Fallback logic
@@ -235,5 +281,29 @@ export class LLMRouter {
         },
       },
     };
+  }
+
+  private shouldUseTools(prompt: string): boolean {
+    const toolKeywords = [
+      'status', 'production', 'efficiency', 'forecast',
+      'analyze', 'show me', 'what is', 'how much',
+      'calculate', 'check', 'monitor', 'report'
+    ];
+    
+    const lowerPrompt = prompt.toLowerCase();
+    return toolKeywords.some(keyword => lowerPrompt.includes(keyword));
+  }
+
+  private preferClaudeForTools(request: LLMRequest): boolean {
+    // Prefer Claude for complex analysis with tools
+    const prompt = request.prompt.toLowerCase();
+    return prompt.includes('analyze') || 
+           prompt.includes('explain') || 
+           prompt.includes('optimize');
+  }
+
+  // New method to get token usage stats
+  getTokenUsageStats() {
+    return this.tokenOptimizer.getUsageStats();
   }
 }
