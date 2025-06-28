@@ -2,9 +2,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 import { WebSocketServer } from 'ws';
-import { createServer } from 'http';
 import Redis from 'ioredis';
 import pino from 'pino';
 import { jwtVerify } from 'jose';
@@ -44,8 +42,8 @@ const services = {
 };
 
 const app = new Hono();
-const httpServer = createServer(app.fetch);
-const wss = new WebSocketServer({ server: httpServer });
+let server: any; // Will be set when server starts
+let wss: WebSocketServer;
 
 // JWT secret
 const secret = new TextEncoder().encode(
@@ -217,7 +215,12 @@ app.all('/api/factory/*', async (c) => {
 });
 
 // WebSocket handling for real-time connections
-wss.on('connection', async (ws, req) => {
+function setupWebSocketServer() {
+  if (!server) return;
+  
+  wss = new WebSocketServer({ server });
+  
+  wss.on('connection', async (ws, req) => {
   log.info('New WebSocket connection');
   
   // Authenticate WebSocket
@@ -287,12 +290,18 @@ wss.on('connection', async (ws, req) => {
   } catch {
     ws.close(1008, 'Invalid token');
   }
-});
+  });
+}
 
 // Start server
 const port = parseInt(process.env.PORT || '8080');
-httpServer.listen(port, '0.0.0.0', () => {
-  log.info(`API Gateway running on http://0.0.0.0:${port}`);
+server = serve({
+  fetch: app.fetch,
+  port,
+  hostname: '0.0.0.0',
+}, (info) => {
+  log.info(`API Gateway running on http://0.0.0.0:${info.port}`);
+  setupWebSocketServer();
 });
 
 // Graceful shutdown
@@ -301,6 +310,8 @@ process.on('SIGTERM', async () => {
   if (redis) {
     redis.disconnect();
   }
-  httpServer.close();
+  if (wss) {
+    wss.close();
+  }
   process.exit(0);
 });
