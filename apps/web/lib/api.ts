@@ -75,7 +75,7 @@ export const api = {
   },
 };
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('auth_token');
+function getAuthHeaders(): HeadersInit {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

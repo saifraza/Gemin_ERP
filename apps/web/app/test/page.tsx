@@ -212,7 +212,7 @@ export default function TestPage() {
               <div>
                 <span className="text-gray-400">Auth Token:</span>{' '}
                 <span className="font-mono">
-                  {localStorage.getItem('auth_token') ? 'Present' : 'Not set'}
+                  {typeof window !== 'undefined' && localStorage.getItem('auth_token') ? 'Present' : 'Not set'}
                 </span>
               </div>
             </div>
