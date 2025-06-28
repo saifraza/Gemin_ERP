@@ -70,8 +70,9 @@ const port = parseInt(process.env.PORT || '3001');
 serve({
   fetch: app.fetch,
   port,
+  hostname: '0.0.0.0', // Important for Railway!
 }, (info) => {
-  log.info(`Core API running on http://localhost:${info.port}`);
+  log.info(`Core API running on http://0.0.0.0:${info.port}`);
 });
 
 // Graceful shutdown

@@ -213,8 +213,9 @@ const PORT = process.env.PORT || 3003;
 serve({
   fetch: app.fetch,
   port: Number(PORT),
+  hostname: '0.0.0.0', // Important for Railway!
 }, () => {
-  log.info(`Event Processor running on http://localhost:${PORT}`);
+  log.info(`Event Processor running on http://0.0.0.0:${PORT}`);
   
   // Initialize services
   initializeRedis();

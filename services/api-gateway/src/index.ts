@@ -215,8 +215,8 @@ wss.on('connection', async (ws, req) => {
 
 // Start server
 const port = parseInt(process.env.PORT || '8080');
-httpServer.listen(port, () => {
-  log.info(`API Gateway running on http://localhost:${port}`);
+httpServer.listen(port, '0.0.0.0', () => {
+  log.info(`API Gateway running on http://0.0.0.0:${port}`);
 });
 
 // Graceful shutdown

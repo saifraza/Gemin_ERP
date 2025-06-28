@@ -84,9 +84,9 @@ wss.on('connection', (ws) => {
 const PORT = process.env.PORT || 3001;
 const WS_PORT = process.env.WS_PORT || 3002;
 
-httpServer.listen(PORT, () => {
-  log.info(`MCP Orchestrator running on http://localhost:${PORT}`);
-  log.info(`WebSocket server running on ws://localhost:${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  log.info(`MCP Orchestrator running on http://0.0.0.0:${PORT}`);
+  log.info(`WebSocket server running on ws://0.0.0.0:${PORT}`);
   
   // Initialize Kafka consumer after server starts
   initializeKafkaConsumer().catch(error => {

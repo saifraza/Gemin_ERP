@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "test": "vitest",
     "type-check": "tsc --noEmit",
+    "db:migrate": "cd database && npx prisma migrate deploy",
     "postinstall": "cd database && npx prisma generate"
   },
   "dependencies": {
