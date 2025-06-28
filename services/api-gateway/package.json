@@ -9,6 +9,7 @@
     "build": "tsup",
     "start": "node dist/index.js",
     "start:simple": "tsx src/simple.ts",
+    "start:express": "tsx src/express-simple.ts",
     "test": "vitest",
     "type-check": "tsc --noEmit",
     "postinstall": "prisma generate || true"
@@ -22,10 +23,14 @@
     "ws": "^8.16.0",
     "@prisma/client": "^5.22.0",
     "@modern-erp/shared-types": "file:./shared-types",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "@types/ws": "^8.5.10",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
     "tsx": "^4.7.0",
     "tsup": "^8.0.0",
     "vitest": "^1.2.0",
