@@ -233,4 +233,54 @@ userRoutes.put('/:id/role', async (c) => {
   }
 });
 
+// Update user's company
+userRoutes.put('/:id/company', async (c) => {
+  try {
+    const { id } = c.req.param();
+    const { companyId } = await c.req.json();
+    
+    // Get current user
+    const userPayload = c.get('jwtPayload');
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userPayload.id },
+      select: { role: true }
+    });
+    
+    // Only SUPER_ADMIN can change companies
+    if (currentUser?.role !== 'SUPER_ADMIN') {
+      return c.json({ error: 'Only super admins can change user companies' }, 403);
+    }
+    
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id: companyId }
+    });
+    
+    if (!company) {
+      return c.json({ error: 'Company not found' }, 404);
+    }
+    
+    // Update user's company
+    const user = await prisma.user.update({
+      where: { id },
+      data: { companyId },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+        company: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    
+    return c.json({ success: true, user });
+  } catch (error: any) {
+    console.error('Error updating user company:', error);
+    return c.json({ error: 'Failed to update user company', details: error.message }, 500);
+  }
+});
+
 export { userRoutes };
