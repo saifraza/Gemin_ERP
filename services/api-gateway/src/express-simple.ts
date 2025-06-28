@@ -15,9 +15,9 @@ const ensureProtocol = (url: string) => {
 
 // Service URLs - Use environment variables provided by Railway
 const services = {
-  core: ensureProtocol(process.env.CORE_API_URL) || 'http://localhost:3001',
-  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL) || 'http://localhost:3000',
-  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL) || 'http://localhost:3003',
+  core: ensureProtocol(process.env.CORE_API_URL),
+  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL),
+  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL),
 };
 
 console.log('Service URLs:', services);
@@ -98,6 +98,13 @@ app.all('/api/*', async (req, res) => {
   let serviceUrl = services.core;
   if (path.startsWith('/api/mcp')) {
     serviceUrl = services.mcp;
+  }
+  
+  if (!serviceUrl) {
+    return res.status(503).json({ 
+      error: 'Service not configured',
+      message: 'Service URL not provided in environment variables'
+    });
   }
   
   const targetUrl = `${serviceUrl}${path}`;
