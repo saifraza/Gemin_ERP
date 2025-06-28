@@ -3,14 +3,11 @@ nixPkgs = ["nodejs_22"]
 
 [phases.install]
 cmds = [
-    "npm install -g pnpm@8.15.0",
-    "pnpm config set auto-install-peers true",
-    "pnpm config set frozen-lockfile false",
-    "pnpm install --no-frozen-lockfile"
+    "npx pnpm@8 install --no-frozen-lockfile"
 ]
 
 [phases.build]
-cmds = ["pnpm build"]
+cmds = ["npx pnpm@8 build"]
 
 [start]
-cmd = "pnpm start"
+cmd = "npm start"
