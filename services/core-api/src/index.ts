@@ -18,29 +18,32 @@ const log = pino({ name: 'core-api' });
 // Initialize services
 export const prisma = new PrismaClient();
 
-// Initialize Redis with better error handling
-let redis: Redis;
-try {
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) {
-    log.error('REDIS_URL environment variable is not set');
-    throw new Error('REDIS_URL is required');
-  }
-  log.info(`Connecting to Redis at: ${redisUrl.replace(/:[^:@]*@/, ':****@')}`);
-  redis = new Redis(redisUrl, {
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times) => {
-      log.warn(`Redis connection attempt ${times}`);
-      return Math.min(times * 50, 2000);
+// Initialize Redis with lazy connection
+let redis: Redis | null = null;
+
+function getRedis(): Redis {
+  if (!redis) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) {
+      log.error('REDIS_URL environment variable is not set');
+      throw new Error('REDIS_URL is required');
     }
-  });
-  redis.on('error', (err) => log.error('Redis error:', err));
-  redis.on('connect', () => log.info('Redis connected successfully'));
-} catch (error) {
-  log.error('Failed to initialize Redis:', error);
-  throw error;
+    log.info(`Connecting to Redis at: ${redisUrl.replace(/:[^:@]*@/, ':****@')}`);
+    redis = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        log.warn(`Redis connection attempt ${times}`);
+        return Math.min(times * 50, 2000);
+      },
+      lazyConnect: true
+    });
+    redis.on('error', (err) => log.error('Redis error:', err));
+    redis.on('connect', () => log.info('Redis connected successfully'));
+  }
+  return redis;
 }
-export { redis };
+
+export { getRedis as redis };
 
 const app = new Hono();
 
@@ -50,6 +53,15 @@ app.use('*', cors({
   credentials: true,
 }));
 app.use('*', logger());
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({ 
+    message: 'Core API is running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Health check
 app.get('/health', async (c) => {
@@ -79,11 +91,15 @@ app.get('/health', async (c) => {
 
   // Check Redis
   try {
-    if (redis && redis.status === 'ready') {
-      await redis.ping();
+    const redisInstance = redis();
+    if (redisInstance.status === 'ready') {
+      await redisInstance.ping();
       health.cache = 'connected';
-    } else {
+    } else if (redisInstance.status === 'connect' || redisInstance.status === 'connecting') {
       health.cache = 'connecting';
+      // Don't mark as degraded while connecting
+    } else {
+      health.cache = redisInstance.status;
       health.status = 'degraded';
     }
   } catch (error) {
@@ -127,6 +143,9 @@ serve({
 process.on('SIGTERM', async () => {
   log.info('Shutting down gracefully...');
   await prisma.$disconnect();
-  redis.disconnect();
+  if (redis) {
+    const redisInstance = redis();
+    redisInstance.disconnect();
+  }
   process.exit(0);
 });
