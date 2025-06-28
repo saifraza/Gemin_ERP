@@ -15,11 +15,11 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   email: z.string().email(),
-  username: z.string().min(3).max(50),
+  username: z.string().min(3).max(50).optional(),
   password: z.string().min(8),
   name: z.string(),
-  companyId: z.string(),
-  role: z.enum(['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER']),
+  companyId: z.string().optional(),
+  role: z.enum(['ADMIN', 'MANAGER', 'OPERATOR', 'VIEWER']).optional(),
 });
 
 // JWT secret
@@ -70,12 +70,19 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
     },
   });
   
-  // Cache session
-  await redis.setex(`session:${token}`, 86400, JSON.stringify({
-    userId: user.id,
-    role: user.role,
-    companyId: user.companyId,
-  }));
+  // Cache session if Redis is available
+  const redisClient = redis();
+  if (redisClient) {
+    try {
+      await redisClient.setex(`session:${token}`, 86400, JSON.stringify({
+        userId: user.id,
+        role: user.role,
+        companyId: user.companyId,
+      }));
+    } catch (error) {
+      console.error('Failed to cache session:', error);
+    }
+  }
   
   // Log activity
   await prisma.activityLog.create({
@@ -106,12 +113,15 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
 authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
   const data = c.req.valid('json');
   
+  // Generate username from email if not provided
+  const username = data.username || data.email.split('@')[0];
+  
   // Check if user exists
   const existing = await prisma.user.findFirst({
     where: {
       OR: [
         { email: data.email },
-        { username: data.username },
+        { username },
       ],
     },
   });
@@ -126,8 +136,12 @@ authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
   // Create user
   const user = await prisma.user.create({
     data: {
-      ...data,
+      email: data.email,
+      username,
+      name: data.name,
       passwordHash,
+      role: data.role || 'VIEWER',
+      companyId: data.companyId,
     },
     include: {
       company: true,
@@ -149,10 +163,17 @@ authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
 // Verify token middleware
 export async function verifyToken(token: string) {
   try {
-    // Check cache first
-    const cached = await redis.get(`session:${token}`);
-    if (cached) {
-      return JSON.parse(cached);
+    // Check cache first if Redis is available
+    const redisClient = redis();
+    if (redisClient) {
+      try {
+        const cached = await redisClient.get(`session:${token}`);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch (error) {
+        console.error('Redis get error:', error);
+      }
     }
     
     // Verify JWT
@@ -168,18 +189,41 @@ export async function verifyToken(token: string) {
       return null;
     }
     
-    // Cache for future requests
-    await redis.setex(`session:${token}`, 3600, JSON.stringify({
-      userId: payload.userId,
-      role: payload.role,
-      companyId: payload.companyId,
-    }));
+    // Cache for future requests if Redis is available
+    if (redisClient) {
+      try {
+        await redisClient.setex(`session:${token}`, 3600, JSON.stringify({
+          userId: payload.userId,
+          role: payload.role,
+          companyId: payload.companyId,
+        }));
+      } catch (error) {
+        console.error('Failed to cache session:', error);
+      }
+    }
     
     return payload;
   } catch {
     return null;
   }
 }
+
+// Verify token endpoint
+authRoutes.get('/verify', async (c) => {
+  const token = c.req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    return c.json({ valid: false, error: 'No token provided' }, 401);
+  }
+  
+  const payload = await verifyToken(token);
+  
+  if (!payload) {
+    return c.json({ valid: false, error: 'Invalid token' }, 401);
+  }
+  
+  return c.json({ valid: true, payload });
+});
 
 // Logout
 authRoutes.post('/logout', async (c) => {
@@ -191,8 +235,15 @@ authRoutes.post('/logout', async (c) => {
       where: { token },
     }).catch(() => {}); // Ignore if not found
     
-    // Remove from cache
-    await redis.del(`session:${token}`);
+    // Remove from cache if Redis is available
+    const redisClient = redis();
+    if (redisClient) {
+      try {
+        await redisClient.del(`session:${token}`);
+      } catch (error) {
+        console.error('Failed to delete session from cache:', error);
+      }
+    }
   }
   
   return c.json({ message: 'Logged out successfully' });
