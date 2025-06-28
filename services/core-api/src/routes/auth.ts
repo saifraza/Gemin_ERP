@@ -273,10 +273,13 @@ authRoutes.post('/test-register', async (c) => {
         data: {
           name: 'Test Company',
           code: 'TEST001',
-          address: '123 Test Street',
-          city: 'Test City',
-          state: 'Test State',
-          country: 'Test Country',
+          address: {
+            street: '123 Test Street',
+            city: 'Test City',
+            state: 'Test State',
+            country: 'Test Country',
+            postalCode: '12345'
+          },
           phone: '+1234567890',
           email: 'test@company.com',
         }
