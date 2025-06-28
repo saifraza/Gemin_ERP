@@ -1,5 +1,29 @@
 # Claude AI Assistant Context
 
+## MCP Integration Status
+
+### API Keys Configured
+- **Gemini API Key**: [Configured in Railway environment]
+- **Claude API Key**: [Configured in Railway environment]
+
+### LLM Router Implementation
+- Multi-model support (Gemini, Claude, GPT-4)
+- Intelligent auto-selection based on task type
+- Fallback mechanisms for reliability
+- Cost optimization logic
+
+### MCP Tools Status
+- `factory_status`: ✅ Implemented with real data
+- `production_forecast`: 🚧 Mock implementation
+- `anomaly_detector`: 🚧 Mock implementation
+- Additional tools pending implementation
+
+### AI Chat Component
+- Added to dashboard at `/dashboard`
+- Supports model selection (auto, gemini, claude)
+- WebSocket ready for real-time communication
+- Context-aware conversations
+
 ## Railway Deployment Rules
 
 ### IMPORTANT: Never hardcode URLs or ports

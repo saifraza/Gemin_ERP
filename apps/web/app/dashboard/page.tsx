@@ -15,6 +15,7 @@ import { AIAssistant } from '@/components/ai-assistant';
 import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { HQDashboard } from '@/components/dashboard/hq-dashboard';
 import { FactoryDashboard } from '@/components/dashboard/factory-dashboard';
+import { AIChat } from '@/components/ai-chat';
 
 // Sample data
 const transactionData = [
@@ -227,6 +228,11 @@ export default function DashboardPage() {
           ) : (
             <FactoryDashboard />
           )}
+          
+          {/* AI Chat Component */}
+          <div className="mt-6">
+            <AIChat />
+          </div>
           
           {/* Keep original dashboard content hidden for now */}
           <div className="hidden">
