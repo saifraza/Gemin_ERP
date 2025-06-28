@@ -57,10 +57,11 @@ Last Updated: June 28, 2025
 ### Internal URLs (Service-to-Service)
 | Service | Internal URL | Purpose |
 |---------|--------------|---------|
-| Core API | http://core-api.railway.internal | User management, Auth, Companies |
-| API Gateway | http://api-gateway.railway.internal | Request routing, Rate limiting |
-| MCP Orchestrator | http://mcp-orchestrator.railway.internal | AI/ML operations |
-| Event Processor | http://event-processor.railway.internal | Async processing |
+| Core API | http://dynamic-nourishment.railway.internal | User management, Auth, Companies |
+| API Gateway | http://compassionate-upliftment.railway.internal | Request routing, Rate limiting |
+| MCP Orchestrator | http://energetic-vision.railway.internal | AI/ML operations |
+| Event Processor | http://incredible-adaptation.railway.internal | Async processing |
+| Web Frontend | http://new_erp.railway.internal | Next.js UI |
 
 ## 🔧 Current Configuration
 
