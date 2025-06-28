@@ -14,6 +14,7 @@ import { userRoutes } from './routes/user.js';
 import { factoryRoutes } from './routes/factory.js';
 import { divisionRoutes } from './routes/division.js';
 import { testRoutes } from './routes/test.js';
+import { cacheTestRoutes } from './routes/cache-test.js';
 
 const log = pino({ name: 'core-api' });
 
@@ -186,6 +187,7 @@ app.route('/api/users', userRoutes);
 app.route('/api/factories', factoryRoutes);
 app.route('/api/divisions', divisionRoutes);
 app.route('/api/test', testRoutes);
+app.route('/api/cache-test', cacheTestRoutes);
 
 // Error handling
 app.onError((err, c) => {
