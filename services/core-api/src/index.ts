@@ -183,12 +183,15 @@ app.onError((err, c) => {
 
 // Start server
 const port = parseInt(process.env.PORT || '3001');
+log.info(`Starting Core API with PORT env: ${process.env.PORT}, parsed as: ${port}`);
+
 serve({
   fetch: app.fetch,
   port,
   hostname: '0.0.0.0', // Important for Railway!
 }, (info) => {
   log.info(`Core API running on http://0.0.0.0:${info.port}`);
+  log.info(`Confirmed: Server is listening on port ${info.port}`);
   
   // Try to connect to Redis after server starts
   setTimeout(async () => {
