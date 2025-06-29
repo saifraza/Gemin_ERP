@@ -4,14 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsup",
+    "build": "npm run db:generate && tsup",
     "start": "node dist/index.js",
     "start:basic": "node dist/basic-index.js",
     "test": "vitest",
     "type-check": "tsc --noEmit",
     "db:migrate": "npx prisma migrate deploy --schema=../../packages/database/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma",
-    "postinstall": "npm run db:generate"
+    
   },
   "dependencies": {
     "hono": "^4.0.0",
