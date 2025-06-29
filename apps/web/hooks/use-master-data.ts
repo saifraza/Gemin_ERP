@@ -339,7 +339,7 @@ export const useDivisions = (factoryId?: string) => {
       if (!res.ok) throw new Error('Failed to fetch divisions');
       return res.json();
     },
-    enabled: !!factoryId,
+    enabled: factoryId !== undefined, // Enable even when factoryId is not provided
   });
 };
 

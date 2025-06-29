@@ -1982,7 +1982,7 @@ function AccessControlTab() {
   const { data: userPermissions } = useUserPermissions(selectedUser || undefined);
   const { data: companies } = useCompanies({ search: '' });
   const { data: factories } = useFactories({ search: '' });
-  const { data: divisions } = useDivisions({ search: '' });
+  const { data: divisions } = useDivisions();
   
   // Mutations
   const assignRole = useAssignUserRole();
@@ -1991,7 +1991,7 @@ function AccessControlTab() {
   const allUsers = users?.pages?.flatMap((page: any) => page.data) || [];
   const allCompanies = companies?.pages?.flatMap((page: any) => page.data) || [];
   const allFactories = factories?.pages?.flatMap((page: any) => page.data) || [];
-  const allDivisions = divisions?.pages?.flatMap((page: any) => page.data) || [];
+  const allDivisions = divisions || [];
 
   return (
     <div className="p-6">
