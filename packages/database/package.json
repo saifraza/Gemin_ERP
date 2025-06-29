@@ -10,6 +10,7 @@
     "db:migrate:prod": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts",
+    "db:seed:procurement": "tsx seed-procurement.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
