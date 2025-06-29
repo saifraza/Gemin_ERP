@@ -15,6 +15,8 @@ import { factoryRoutes } from './routes/factory.js';
 import { divisionRoutes } from './routes/division.js';
 import { factoryAccessRoutes } from './routes/factory-access.js';
 import { rbacRoutes } from './routes/rbac.js';
+import { testCompaniesRoutes } from './routes/test-companies.js';
+import { seedRoutes } from './routes/seed.js';
 
 const log = pino({ name: 'core-api' });
 
@@ -138,6 +140,8 @@ app.route('/api/factories', factoryRoutes);
 app.route('/api/divisions', divisionRoutes);
 app.route('/api/factory-access', factoryAccessRoutes);
 app.route('/api/rbac', rbacRoutes);
+app.route('/api/test-companies', testCompaniesRoutes);
+app.route('/api/seed', seedRoutes);
 
 // Error handling
 app.onError((err, c) => {

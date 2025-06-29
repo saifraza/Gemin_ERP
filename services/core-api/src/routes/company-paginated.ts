@@ -28,15 +28,23 @@ companyRoutes.get('/', requireModulePermission('COMPANIES', 'READ'), zValidator(
   const context = getFactoryContext(c);
   const userPermissions = c.get('userPermissions');
   
+  console.log('[Company Route Debug] Context:', {
+    role: context?.role,
+    companyId: context?.companyId,
+    userId: context?.userId,
+    accessLevel: context?.accessLevel
+  });
+  
   // Calculate offset
   const offset = (page - 1) * limit;
   
   // Build where clause based on user permissions
   let whereClause: any = {};
   
-  // Super admins can see everything
+  // Super admins can see everything - no filtering needed
   if (context.role === 'SUPER_ADMIN') {
-    // No filtering needed
+    console.log('[Company Route] SUPER_ADMIN detected - showing all companies');
+    // whereClause remains empty, which means no filtering
   } else {
     // Check if user has global company access
     const hasGlobalAccess = userPermissions?.permissions?.some((p: any) => 
@@ -82,6 +90,8 @@ companyRoutes.get('/', requireModulePermission('COMPANIES', 'READ'), zValidator(
     }
   }
   
+  console.log('[Company Route Debug] Final whereClause:', JSON.stringify(whereClause, null, 2));
+  
   // Execute queries in parallel for better performance
   const [companies, total] = await Promise.all([
     prisma.company.findMany({
@@ -102,6 +112,13 @@ companyRoutes.get('/', requireModulePermission('COMPANIES', 'READ'), zValidator(
     }),
     prisma.company.count({ where: whereClause }),
   ]);
+  
+  console.log('[Company Route Debug] Query results:', {
+    total,
+    companiesFound: companies.length,
+    page,
+    limit
+  });
   
   // Calculate pagination metadata
   const totalPages = Math.ceil(total / limit);
