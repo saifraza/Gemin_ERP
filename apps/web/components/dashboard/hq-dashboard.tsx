@@ -18,8 +18,22 @@ export function HQDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const financial = await api.get('/api/finance/dashboard');
-      setFinancialData(financial);
+      // TODO: Implement finance dashboard endpoint
+      // const financial = await api.get('/api/finance/dashboard');
+      // setFinancialData(financial);
+      
+      // For now, use mock data
+      setFinancialData({
+        kpis: {
+          revenue: 52500000,
+          expenses: 45000000,
+          netProfit: 7500000,
+          cashFlow: 12000000
+        },
+        profitLoss: {
+          factories: []
+        }
+      });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {

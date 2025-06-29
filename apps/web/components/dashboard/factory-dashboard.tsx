@@ -20,8 +20,16 @@ export function FactoryDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const data = await api.get('/api/finance/dashboard');
-      setDashboardData(data);
+      // TODO: Implement finance dashboard endpoint
+      // const data = await api.get('/api/finance/dashboard');
+      // setDashboardData(data);
+      
+      // For now, use mock data
+      setDashboardData({
+        kpis: {
+          revenue: 12500000, // ₹125L
+        }
+      });
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {

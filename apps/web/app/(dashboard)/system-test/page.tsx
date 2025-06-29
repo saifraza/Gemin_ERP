@@ -14,25 +14,27 @@ interface ServiceStatus {
 }
 
 export default function SystemTestPage() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  
   const [services, setServices] = useState<ServiceStatus[]>([
     {
       name: 'API Gateway',
-      url: '/api/health',
+      url: `${apiUrl}/health`,
       status: 'unknown'
     },
     {
       name: 'Core API',
-      url: '/api/core/health',
+      url: `${apiUrl}/api/core/health`,
       status: 'unknown'
     },
     {
       name: 'MCP Orchestrator',
-      url: '/api/mcp/health',
+      url: `${apiUrl}/api/mcp/health`,
       status: 'unknown'
     },
     {
       name: 'Database Connection',
-      url: '/api/system/database',
+      url: `${apiUrl}/api/system/database`,
       status: 'unknown'
     }
   ]);
