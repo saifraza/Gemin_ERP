@@ -1,0 +1,259 @@
+// ==================== RBAC MODELS ====================
+
+// Enhanced Role model with hierarchy support
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  level       Int      // Hierarchy level (higher number = more permissions)
+  parentId    String?  // For role inheritance
+  isSystem    Boolean  @default(false) // System roles can't be deleted
+  
+  parent      Role?    @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children    Role[]   @relation("RoleHierarchy")
+  
+  permissions RolePermission[]
+  users       UserRole[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([level])
+}
+
+// Module definitions for the ERP system
+model Module {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  icon        String?
+  path        String?  // Route path
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  
+  subModules  SubModule[]
+  permissions Permission[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Sub-modules within main modules
+model SubModule {
+  id          String   @id @default(cuid())
+  moduleId    String
+  name        String
+  displayName String
+  description String?
+  path        String?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  
+  module      Module   @relation(fields: [moduleId], references: [id])
+  permissions Permission[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([moduleId, name])
+}
+
+// Granular permissions
+model Permission {
+  id          String   @id @default(cuid())
+  moduleId    String
+  subModuleId String?
+  action      PermissionAction
+  resource    String   // e.g., "chart_of_accounts", "journal_entries"
+  description String?
+  
+  module      Module   @relation(fields: [moduleId], references: [id])
+  subModule   SubModule? @relation(fields: [subModuleId], references: [id])
+  
+  roles       RolePermission[]
+  users       UserPermission[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([moduleId, subModuleId, action, resource])
+  @@index([moduleId, action])
+}
+
+// Many-to-many relation between roles and permissions
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// User-Role assignments with scope
+model UserRole {
+  id            String   @id @default(cuid())
+  userId        String
+  roleId        String
+  scope         ScopeType
+  scopeId       String?  // ID of company/factory/division based on scope
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          Role     @relation(fields: [roleId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, roleId, scope, scopeId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+// Direct user permissions (overrides)
+model UserPermission {
+  id            String   @id @default(cuid())
+  userId        String
+  permissionId  String
+  granted       Boolean  @default(true) // Can also revoke specific permissions
+  scope         ScopeType
+  scopeId       String?
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, permissionId, scope, scopeId])
+  @@index([userId])
+  @@index([permissionId])
+}
+
+// Resource-based access control
+model ResourceAccess {
+  id            String   @id @default(cuid())
+  userId        String
+  resourceType  ResourceType
+  resourceId    String
+  accessLevel   ResourceAccessLevel
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, resourceType])
+}
+
+// Business Unit model for hierarchical access
+model BusinessUnit {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  code        String
+  description String?
+  parentId    String?
+  
+  company     Company  @relation(fields: [companyId], references: [id])
+  parent      BusinessUnit? @relation("BUHierarchy", fields: [parentId], references: [id])
+  children    BusinessUnit[] @relation("BUHierarchy")
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+}
+
+// ==================== UPDATED USER MODEL ====================
+// Add these relations to the existing User model:
+/*
+model User {
+  // ... existing fields ...
+  
+  userRoles       UserRole[]
+  userPermissions UserPermission[]
+  resourceAccess  ResourceAccess[]
+  
+  // ... rest of the model ...
+}
+*/
+
+// ==================== NEW ENUMS ====================
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  EXPORT
+  IMPORT
+  EXECUTE
+  MANAGE
+}
+
+enum ScopeType {
+  GLOBAL      // Entire system
+  COMPANY     // Specific company
+  BUSINESS_UNIT // Specific business unit
+  FACTORY     // Specific factory
+  DIVISION    // Specific division
+}
+
+enum ResourceType {
+  REPORT
+  DOCUMENT
+  WORKFLOW
+  MASTER_DATA
+  TRANSACTION
+  CONFIGURATION
+}
+
+enum ResourceAccessLevel {
+  NONE
+  VIEW
+  EDIT
+  FULL
+}
+
+// ==================== PREDEFINED DATA ====================
+// These would be seeded during setup:
+
+/*
+Example Roles:
+- MD (level: 100) - Full system access
+- CTO (level: 90) - Technology and systems
+- CFO (level: 90) - Finance modules
+- Factory Manager (level: 70) - Factory operations
+- Department Head (level: 60) - Department specific
+- Supervisor (level: 50) - Limited management
+- Operator (level: 30) - Basic operations
+- Viewer (level: 10) - Read-only access
+
+Example Modules:
+- Finance (GL, AR, AP, Banking, Costing)
+- HR (Employee, Payroll, Attendance, Leave)
+- Manufacturing (Production, Quality, Maintenance)
+- Procurement (Purchase, Vendor, RFQ)
+- Sales (Customer, Orders, Pricing)
+- Inventory (Stock, Warehouse, Movement)
+- Reports (Financial, Operational, Analytics)
+- System (Configuration, Users, Audit)
+
+Example Permissions:
+- finance.gl.chart_of_accounts.CREATE
+- finance.gl.journal_entries.APPROVE
+- manufacturing.production.batch.UPDATE
+- reports.financial.balance_sheet.VIEW
+- system.users.roles.MANAGE
+*/
