@@ -116,16 +116,33 @@ function MasterDataContent() {
     const selectedCompany = companies.find(c => c.id === addFormData.factoryCompanyId);
     console.log('Found company:', selectedCompany);
     
-    if (selectedCompany && selectedCompany.address) {
-      // Simply copy the full address
-      // City and State should be filled manually as they might not be parseable from address
-      setAddFormData({
-        ...addFormData,
-        factoryAddress: selectedCompany.address,
-      });
-      toast.success('Company address copied! Please fill in City and State.');
-    } else if (selectedCompany && !selectedCompany.address) {
-      toast.error('Selected company has no address');
+    if (selectedCompany) {
+      // Check if address is an object or string
+      let addressText = '';
+      
+      if (typeof selectedCompany.address === 'string') {
+        addressText = selectedCompany.address;
+      } else if (selectedCompany.address && typeof selectedCompany.address === 'object') {
+        // If address is an object, try to extract the text
+        addressText = selectedCompany.address.address || 
+                     selectedCompany.address.street || 
+                     selectedCompany.address.line1 || 
+                     JSON.stringify(selectedCompany.address);
+      }
+      
+      console.log('Address type:', typeof selectedCompany.address);
+      console.log('Address value:', selectedCompany.address);
+      console.log('Extracted address text:', addressText);
+      
+      if (addressText && addressText !== '{}') {
+        setAddFormData({
+          ...addFormData,
+          factoryAddress: addressText,
+        });
+        toast.success('Company address copied! Please fill in City and State.');
+      } else {
+        toast.error('Selected company has no valid address');
+      }
     } else {
       toast.error('Please select a company first');
     }
@@ -588,6 +605,9 @@ function MasterDataContent() {
                       <p className="text-sm text-gray-600">Phone: {company.phone}</p>
                       {company.gstNumber && (
                         <p className="text-sm text-gray-600">GST: {company.gstNumber}</p>
+                      )}
+                      {company.address && (
+                        <p className="text-sm text-gray-600">Address: {typeof company.address === 'string' ? company.address : JSON.stringify(company.address)}</p>
                       )}
                       <div className="mt-2 flex gap-4 text-sm">
                         <span className="text-blue-600">
