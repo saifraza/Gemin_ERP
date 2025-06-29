@@ -1,7 +1,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { factoryTools } from './factory-tools.js';
-import { procurementTools } from './procurement-tools.js';
 import { analyticsTools } from './analytics-tools.js';
 import { workflowTools } from './workflow-tools.js';
 import { documentTools } from './document-tools.js';
@@ -12,7 +11,6 @@ export function setupMCPTools(server: Server) {
   // Register all tool categories
   const allTools = [
     ...factoryTools,
-    ...procurementTools,
     ...analyticsTools,
     ...workflowTools,
     ...documentTools,
