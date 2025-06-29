@@ -9,8 +9,8 @@
     "start:basic": "node dist/basic-index.js",
     "test": "vitest",
     "type-check": "tsc --noEmit",
-    "db:migrate": "cd database && npx prisma migrate deploy",
-    "db:generate": "cd database && npx prisma generate",
+    "db:migrate": "npx prisma migrate deploy --schema=../packages/database/prisma/schema.prisma",
+    "db:generate": "npx prisma generate --schema=../packages/database/prisma/schema.prisma",
     "postinstall": "npm run db:generate"
   },
   "dependencies": {
