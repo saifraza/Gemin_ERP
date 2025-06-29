@@ -69,19 +69,9 @@ const createFactorySchema = z.object({
   code: z.string().min(1),
   type: z.enum(['INTEGRATED', 'SUGAR_ONLY', 'DISTILLERY', 'COGEN']),
   companyId: z.string(),
-  location: z.object({
-    address: z.string(),
-    city: z.string(),
-    state: z.string(),
-    country: z.string(),
-    postalCode: z.string(),
-    coordinates: z.object({
-      latitude: z.number(),
-      longitude: z.number(),
-    }).optional(),
-  }),
-  crushingCapacity: z.number().positive(),
-  isActive: z.boolean().optional(),
+  location: z.any(), // JSON field - flexible structure
+  coordinates: z.any().optional(), // JSON field
+  capacity: z.any(), // JSON field with sugar, ethanol, power, feed
 });
 
 // Get factory by ID

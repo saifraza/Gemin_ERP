@@ -299,6 +299,7 @@ export const useCreateFactory = () => {
   
   return useMutation({
     mutationFn: async (data: any) => {
+      console.log('Creating factory with data:', data);
       const res = await fetch(`${API_URL}/api/factories`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -306,7 +307,8 @@ export const useCreateFactory = () => {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to create business unit');
+        console.error('Factory creation error:', error);
+        throw new Error(error.error || error.message || JSON.stringify(error) || 'Failed to create business unit');
       }
       const responseData = await res.json();
       return responseData;

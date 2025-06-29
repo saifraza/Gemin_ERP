@@ -266,12 +266,21 @@ function MasterDataContent() {
           }
         }
         
+        // Ensure location has all required fields
+        const location = {
+          address: createFormData.location?.address || '',
+          city: createFormData.location?.city || '',
+          state: createFormData.location?.state || '',
+          country: 'India', // Default to India
+          postalCode: '' // Optional
+        };
+        
         const factoryData = {
           name: createFormData.name,
           code: createFormData.code,
           type: factoryType,
           companyId: createFormData.companyId,
-          location: createFormData.location || {},
+          location: location,
           capacity: capacity
         };
         
