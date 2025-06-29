@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { prisma } from '../index.js';
-import { factoryAccessMiddleware, getFactoryContext } from '../middleware/factory-access.js';
+import { prisma } from '../index';
+import { factoryAccessMiddleware, getFactoryContext } from '../middleware/factory-access';
 // TEMPORARY: Using bypass middleware for debugging
-// import { requireModulePermission } from '../middleware/rbac.js';
-import { requireModulePermission } from '../middleware/rbac-temp-disable.js';
+// import { requireModulePermission } from '../middleware/rbac';
+import { requireModulePermission } from '../middleware/rbac-temp-disable';
 
 const companyRoutes = new Hono();
 

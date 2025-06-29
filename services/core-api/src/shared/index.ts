@@ -1,4 +1,4 @@
 // Main export file for @modern-erp/shared
-export * from './queue/index.js';
-export * from './events/index.js';
-export * from './cache/index.js';
+export * from './queue/index';
+export * from './events/index';
+export * from './cache/index';

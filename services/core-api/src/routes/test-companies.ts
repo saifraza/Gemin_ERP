@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { prisma } from '../index.js';
+import { prisma } from '../index';
 
 const testCompaniesRoutes = new Hono();
 

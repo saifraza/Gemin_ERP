@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { HonoEnv } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { z } from 'zod';
+import { prisma } from '../index';
 
-const materials = new Hono<HonoEnv>();
+const materials = new Hono();
 
 // Material schemas
 const createMaterialSchema = z.object({
@@ -85,7 +85,7 @@ materials.get('/', authMiddleware(), async (c) => {
   }
 
   const [materials, total] = await Promise.all([
-    c.var.db.material.findMany({
+    prisma.material.findMany({
       where,
       skip,
       take: limitNum,
@@ -108,7 +108,7 @@ materials.get('/', authMiddleware(), async (c) => {
         { code: 'asc' }
       ]
     }),
-    c.var.db.material.count({ where })
+    prisma.material.count({ where })
   ]);
 
   return c.json({
@@ -127,7 +127,7 @@ materials.get('/:id', authMiddleware(), async (c) => {
   const user = c.get('user');
   const { id } = c.req.param();
 
-  const material = await c.var.db.material.findUnique({
+  const material = await prisma.material.findUnique({
     where: { id },
     include: {
       company: {
@@ -170,7 +170,7 @@ materials.post('/', authMiddleware(), async (c) => {
   }
 
   // Check if code already exists
-  const existing = await c.var.db.material.findUnique({
+  const existing = await prisma.material.findUnique({
     where: { code: result.data.code }
   });
 
@@ -183,7 +183,7 @@ materials.post('/', authMiddleware(), async (c) => {
     return c.json({ error: 'Cannot create material for another company' }, 403);
   }
 
-  const material = await c.var.db.material.create({
+  const material = await prisma.material.create({
     data: {
       ...result.data,
       companyId: result.data.companyId || (user.role === 'SUPER_ADMIN' ? null : user.companyId),
@@ -222,7 +222,7 @@ materials.put('/:id', authMiddleware(), async (c) => {
   }
 
   // Check if material exists and user has access
-  const existing = await c.var.db.material.findUnique({
+  const existing = await prisma.material.findUnique({
     where: { id }
   });
 
@@ -236,7 +236,7 @@ materials.put('/:id', authMiddleware(), async (c) => {
 
   // Check if new code already exists
   if (result.data.code && result.data.code !== existing.code) {
-    const codeExists = await c.var.db.material.findUnique({
+    const codeExists = await prisma.material.findUnique({
       where: { code: result.data.code }
     });
 
@@ -245,7 +245,7 @@ materials.put('/:id', authMiddleware(), async (c) => {
     }
   }
 
-  const material = await c.var.db.material.update({
+  const material = await prisma.material.update({
     where: { id },
     data: result.data,
     include: {
@@ -274,7 +274,7 @@ materials.delete('/:id', authMiddleware(), async (c) => {
   const { id } = c.req.param();
 
   // Check if material exists and user has access
-  const existing = await c.var.db.material.findUnique({
+  const existing = await prisma.material.findUnique({
     where: { id }
   });
 
@@ -287,7 +287,7 @@ materials.delete('/:id', authMiddleware(), async (c) => {
   }
 
   // Soft delete by marking as inactive
-  await c.var.db.material.update({
+  await prisma.material.update({
     where: { id },
     data: { isActive: false }
   });
@@ -323,7 +323,7 @@ materials.post('/bulk-import', authMiddleware(), async (c) => {
       }
 
       // Check if code already exists
-      const existing = await c.var.db.material.findUnique({
+      const existing = await prisma.material.findUnique({
         where: { code: result.data.code }
       });
 
@@ -336,7 +336,7 @@ materials.post('/bulk-import', authMiddleware(), async (c) => {
         continue;
       }
 
-      await c.var.db.material.create({
+      await prisma.material.create({
         data: {
           ...result.data,
           companyId: result.data.companyId || (user.role === 'SUPER_ADMIN' ? null : user.companyId),
@@ -368,7 +368,7 @@ materials.get('/stats/categories', authMiddleware(), async (c) => {
     ]
   };
 
-  const categories = await c.var.db.material.groupBy({
+  const categories = await prisma.material.groupBy({
     by: ['category'],
     where,
     _count: {

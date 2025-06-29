@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
-import { prisma } from '../../index.js';
+import { prisma } from '../../index';
 import indents from './indents';
 import vendors from './vendors';
 import rfqs from './rfqs';

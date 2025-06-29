@@ -6,20 +6,20 @@ import { logger } from 'hono/logger';
 import pkg from '@prisma/client';
 const { PrismaClient } = pkg;
 import pino from 'pino';
-import { PostgreSQLCache } from './shared/cache/index.js';
+import { PostgreSQLCache } from './shared/cache/index';
 
 // Routes
-import { authRoutes } from './routes/auth.js';
-import { companyRoutes } from './routes/company-paginated.js';
-import { userRoutes } from './routes/user.js';
-import { factoryRoutes } from './routes/factory.js';
-import { divisionRoutes } from './routes/division.js';
-import { factoryAccessRoutes } from './routes/factory-access.js';
-import { rbacRoutes } from './routes/rbac.js';
-import { testCompaniesRoutes } from './routes/test-companies.js';
-import { seedRoutes } from './routes/seed.js';
-import procurement from './routes/procurement/index.js';
-import materials from './routes/materials.js';
+import { authRoutes } from './routes/auth';
+import { companyRoutes } from './routes/company-paginated';
+import { userRoutes } from './routes/user';
+import { factoryRoutes } from './routes/factory';
+import { divisionRoutes } from './routes/division';
+import { factoryAccessRoutes } from './routes/factory-access';
+import { rbacRoutes } from './routes/rbac';
+import { testCompaniesRoutes } from './routes/test-companies';
+import { seedRoutes } from './routes/seed';
+import procurement from './routes/procurement/index';
+import materials from './routes/materials';
 
 const log = pino({ name: 'core-api' });
 

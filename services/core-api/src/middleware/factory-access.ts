@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono';
-import { prisma } from '../index.js';
-import { verifyToken } from '../routes/auth.js';
+import { prisma } from '../index';
+import { verifyToken } from '../routes/auth';
 
 export interface FactoryContext {
   userId: string;

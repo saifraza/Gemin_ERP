@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { prisma } from '../index.js';
-import { verifyToken } from './auth.js';
+import { prisma } from '../index';
+import { verifyToken } from './auth';
 
 const seedRoutes = new Hono();
 

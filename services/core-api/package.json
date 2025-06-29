@@ -1,7 +1,6 @@
 {
   "name": "@modern-erp/core-api",
   "version": "1.0.1",
-  "type": "module",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",

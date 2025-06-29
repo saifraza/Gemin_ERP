@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
-import { prisma } from '../../index.js';
+import { prisma } from '../../index';
 import pkg from '@prisma/client';
 const { IndentPriority, IndentStatus } = pkg;
 

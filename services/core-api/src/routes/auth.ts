@@ -3,8 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
-import { prisma, cache } from '../index.js';
-import { PostgreSQLSessionStore } from '../shared/cache/index.js';
+import { prisma, cache } from '../index';
+import { PostgreSQLSessionStore } from '../shared/cache/index';
 
 const authRoutes = new Hono();
 

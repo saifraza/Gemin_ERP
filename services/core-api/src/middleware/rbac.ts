@@ -1,5 +1,5 @@
 import { Context, Next } from 'hono';
-import { prisma } from '../index.js';
+import { prisma } from '../index';
 
 interface PermissionCheckOptions {
   permission: string;

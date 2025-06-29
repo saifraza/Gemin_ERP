@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { prisma } from '../index.js';
+import { prisma } from '../index';
 import { jwtVerify } from 'jose';
-import { requireModulePermission } from '../middleware/rbac.js';
+import { requireModulePermission } from '../middleware/rbac';
 
 const divisionRoutes = new Hono();
 
