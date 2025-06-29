@@ -323,7 +323,25 @@ app.all('/api/*', async (c) => {
   
   // Determine which service to forward to
   let serviceUrl = services.core;
-  if (path.startsWith('/mcp')) {
+  let forwardPath = `/api${path}`;
+  
+  // Special handling for service health checks
+  if (path === '/core/health') {
+    serviceUrl = services.core;
+    forwardPath = '/health';
+  } else if (path === '/mcp/health') {
+    serviceUrl = services.mcp;
+    forwardPath = '/health';
+  } else if (path === '/factory/health') {
+    serviceUrl = services.factory;
+    forwardPath = '/health';
+  } else if (path === '/analytics/health') {
+    serviceUrl = services.analytics;
+    forwardPath = '/health';
+  } else if (path === '/event-processor/health') {
+    serviceUrl = services.eventProcessor;
+    forwardPath = '/health';
+  } else if (path.startsWith('/mcp')) {
     serviceUrl = services.mcp;
   } else if (path.startsWith('/factory')) {
     serviceUrl = services.factory;
@@ -331,7 +349,7 @@ app.all('/api/*', async (c) => {
     serviceUrl = services.analytics;
   }
   
-  const url = `${serviceUrl}/api${path}`;
+  const url = `${serviceUrl}${forwardPath}`;
   const user = c.get('user');
   
   try {
