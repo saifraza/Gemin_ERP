@@ -11,6 +11,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts",
     "db:seed:procurement": "tsx seed-procurement.ts",
+    "db:seed:materials": "tsx seed-materials.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

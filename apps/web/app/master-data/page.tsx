@@ -19,6 +19,7 @@ import {
   Network,
   Shield,
   FileSpreadsheet,
+  Package,
   X
 } from 'lucide-react';
 import {
@@ -127,6 +128,58 @@ const indianStates = [
   // Union Territories
   'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
   'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
+// Master Data Modules
+const masterDataModules = [
+  {
+    icon: Building2,
+    title: 'Companies',
+    description: 'Manage company entities and organizational structure',
+    href: '/master-data?tab=companies',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50'
+  },
+  {
+    icon: Users,
+    title: 'Users',
+    description: 'User management, authentication and access control',
+    href: '/master-data?tab=users',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50'
+  },
+  {
+    icon: Factory,
+    title: 'Business Units',
+    description: 'Factories, plants and operational units configuration',
+    href: '/master-data?tab=factories',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50'
+  },
+  {
+    icon: Network,
+    title: 'Divisions',
+    description: 'Department and divisional hierarchy setup',
+    href: '/master-data?tab=divisions',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50'
+  },
+  {
+    icon: Shield,
+    title: 'Access Control',
+    description: 'Role-based permissions and security settings',
+    href: '/master-data?tab=access',
+    color: 'text-red-600',
+    bgColor: 'bg-red-50'
+  },
+  {
+    icon: Package,
+    title: 'Materials',
+    description: 'Material master data and item catalog management',
+    href: '/master-data?tab=materials',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50'
+  }
 ];
 
 // Division types by business unit type

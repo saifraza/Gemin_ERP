@@ -27,6 +27,7 @@ model Company {
   indents   MaterialIndent[]
   rfqs      RFQ[]
   purchaseOrders PurchaseOrder[]
+  materials Material[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,6 +81,7 @@ model User {
   posCreated    PurchaseOrder[] @relation("POCreatedBy")
   posApproved   PurchaseOrder[] @relation("POApprovedBy")
   approvalRequests ApprovalRequest[]
+  materials Material[] @relation("MaterialCreator")
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -569,6 +571,56 @@ model Vendor {
   @@index([companyId, category, status])
 }
 
+model Material {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  description       String?
+  category          String
+  subCategory       String?
+  unit              String   // Primary unit of measure (PCS, KG, LTR, MTR, etc.)
+  alternateUnits    Json?    // Array of {unit, conversionFactor}
+  specifications    Json?    // Technical specifications
+  hsnCode           String?  // Harmonized System Nomenclature code for tax
+  
+  // Inventory Details
+  minStockLevel     Float    @default(0)
+  maxStockLevel     Float?
+  reorderLevel      Float?
+  reorderQuantity   Float?
+  leadTimeDays      Int      @default(0)
+  
+  // Pricing Information
+  standardCost      Float?
+  lastPurchasePrice Float?
+  averageCost       Float?
+  
+  // Classification
+  type              MaterialType @default(RAW_MATERIAL)
+  isActive          Boolean  @default(true)
+  isCritical        Boolean  @default(false)
+  isHazardous       Boolean  @default(false)
+  
+  // Company Relationship
+  companyId         String?  // Null means common to all companies
+  company           Company? @relation(fields: [companyId], references: [id])
+  
+  // Tracking
+  createdById       String
+  createdBy         User     @relation("MaterialCreator", fields: [createdById], references: [id])
+  
+  // Related Data
+  preferredVendors  String[] // Array of vendor IDs
+  warehouseLocations Json?   // Array of {warehouseId, location, quantity}
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([code])
+  @@index([companyId, category, isActive])
+  @@index([name])
+}
+
 model RFQ {
   id              String   @id @default(cuid())
   rfqNumber       String   @unique
@@ -841,6 +893,16 @@ enum VendorStatus {
   INACTIVE
   BLOCKED
   PENDING_APPROVAL
+}
+
+enum MaterialType {
+  RAW_MATERIAL
+  CONSUMABLE
+  SPARE_PART
+  FINISHED_GOOD
+  SEMI_FINISHED
+  PACKING_MATERIAL
+  OTHERS
 }
 
 enum RFQStatus {

@@ -18,6 +18,7 @@ import { rbacRoutes } from './routes/rbac.js';
 import { testCompaniesRoutes } from './routes/test-companies.js';
 import { seedRoutes } from './routes/seed.js';
 import procurement from './routes/procurement/index.js';
+import materials from './routes/materials.js';
 
 const log = pino({ name: 'core-api' });
 
@@ -144,6 +145,7 @@ app.route('/api/rbac', rbacRoutes);
 app.route('/api/test-companies', testCompaniesRoutes);
 app.route('/api/seed', seedRoutes);
 app.route('/api/procurement', procurement);
+app.route('/api/materials', materials);
 
 // Error handling
 app.onError((err, c) => {
