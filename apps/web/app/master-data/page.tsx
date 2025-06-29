@@ -6,17 +6,26 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Trash2, Edit, Building2, Users, Factory } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export default function MasterDataPage() {
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
   const [companies, setCompanies] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [factories, setFactories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('companies');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'companies');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+  
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   useEffect(() => {
     loadAllData();

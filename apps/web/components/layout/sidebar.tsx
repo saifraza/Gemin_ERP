@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { 
   ChevronRight, 
   ChevronDown,
+  ChevronLeft,
   LayoutDashboard,
   Database,
   DollarSign,
@@ -22,7 +23,8 @@ import {
   Settings,
   Network,
   Lock,
-  UserCog
+  UserCog,
+  Building2
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -45,6 +47,7 @@ interface SidebarSection {
 interface SidebarProps {
   activeItem?: string;
   onItemClick?: (itemId: string) => void;
+  selectedModule?: string;
 }
 
 // Comprehensive ERP navigation structure based on erp-navigation-structure.md
@@ -259,11 +262,24 @@ const defaultSections: SidebarSection[] = [
   }
 ];
 
-export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps) {
+export function Sidebar({ activeItem = 'dashboard', onItemClick, selectedModule }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Main', 'System']));
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  
+  // Define Master Data as a module structure
+  const masterDataSection: SidebarSection = {
+    title: 'Master Data',
+    icon: <Database size={16} />,
+    items: [
+      { id: 'companies', label: 'Companies', href: '/master-data?tab=companies', icon: <Building2 size={18} /> },
+      { id: 'users', label: 'Users', href: '/master-data?tab=users', icon: <Users size={18} /> },
+      { id: 'factories', label: 'Factories', href: '/master-data?tab=factories', icon: <Factory size={18} /> },
+      { id: 'divisions', label: 'Divisions', href: '/master-data?tab=divisions', icon: <Network size={18} /> },
+      { id: 'access-control', label: 'Access Control', href: '/master-data?tab=access', icon: <Shield size={18} /> },
+    ]
+  };
   
   const toggleSection = (sectionTitle: string) => {
     const newExpanded = new Set(expandedSections);
@@ -330,24 +346,69 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps)
     );
   };
   
+  // Determine which sections to show
+  let sectionsToShow: SidebarSection[] = [];
+  
+  if (selectedModule === 'master-data') {
+    // Show only Master Data sub-modules
+    sectionsToShow = [masterDataSection];
+  } else if (selectedModule) {
+    // Find the selected module and show only its content
+    const moduleSection = defaultSections.find(section => {
+      const sectionKey = section.title.toLowerCase().replace(/\s+/g, '-').replace('&', 'and');
+      return sectionKey === selectedModule || 
+             section.items.some(item => item.id === selectedModule);
+    });
+    
+    if (moduleSection) {
+      sectionsToShow = [moduleSection];
+    } else {
+      // If module not found, show default sections
+      sectionsToShow = defaultSections;
+    }
+  } else {
+    // Show all sections when no module is selected
+    sectionsToShow = defaultSections;
+  }
+  
+  // Always expand the sections when showing module-specific view
+  const effectiveExpandedSections = selectedModule 
+    ? new Set(sectionsToShow.map(s => s.title))
+    : expandedSections;
+  
   return (
     <div className="sidebar">
-      {defaultSections.map((section) => {
-        const isExpanded = expandedSections.has(section.title);
+      {/* Add a back button when in module view */}
+      {selectedModule && (
+        <div 
+          className="sidebar-item mb-2 cursor-pointer hover:bg-gray-100"
+          onClick={() => router.push('/dashboard')}
+        >
+          <div className="flex items-center gap-2 text-blue-600">
+            <ChevronLeft size={18} />
+            <span>Back to All Modules</span>
+          </div>
+        </div>
+      )}
+      
+      {sectionsToShow.map((section) => {
+        const isExpanded = effectiveExpandedSections.has(section.title);
         
         return (
           <div key={section.title} className="sidebar-section">
             <div 
               className="sidebar-title cursor-pointer flex items-center justify-between"
-              onClick={() => toggleSection(section.title)}
+              onClick={() => !selectedModule && toggleSection(section.title)}
             >
               <div className="flex items-center gap-2">
                 {section.icon && <span className="text-gray-500">{section.icon}</span>}
                 <span>{section.title}</span>
               </div>
-              <span className="text-gray-400">
-                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
+              {!selectedModule && (
+                <span className="text-gray-400">
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </span>
+              )}
             </div>
             {isExpanded && (
               <div className="mt-1">

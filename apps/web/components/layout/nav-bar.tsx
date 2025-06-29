@@ -6,21 +6,21 @@ import { ChevronDown } from 'lucide-react';
 interface NavBarProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  onModuleSelect?: (module: string | undefined) => void;
 }
 
 const modules = [
-  { id: 'operations', name: 'Operations Module', icon: '📦' },
-  { id: 'sales', name: 'Sales & Distribution', icon: '💼' },
-  { id: 'finance', name: 'Finance Module', icon: '💰' },
-  { id: 'hr', name: 'Human Resources', icon: '👥' },
-  { id: 'procurement', name: 'Procurement', icon: '🛒' },
-  { id: 'production', name: 'Production', icon: '🏭' },
-  { id: 'inventory', name: 'Inventory Management', icon: '📊' },
-  { id: 'quality', name: 'Quality Management', icon: '✅' },
-  { id: 'maintenance', name: 'Maintenance', icon: '🔧' },
-  { id: 'crm', name: 'Customer Relations', icon: '🤝' },
-  { id: 'analytics', name: 'Analytics & BI', icon: '📈' },
-  { id: 'assets', name: 'Asset Management', icon: '🏢' },
+  { id: 'master-data', name: 'Master Data', icon: '🗄️', moduleKey: 'master-data' },
+  { id: 'finance', name: 'Financial Management', icon: '💰', moduleKey: 'financial-management' },
+  { id: 'scm', name: 'Supply Chain', icon: '📦', moduleKey: 'supply-chain-management' },
+  { id: 'manufacturing', name: 'Manufacturing', icon: '🏭', moduleKey: 'manufacturing' },
+  { id: 'hr', name: 'Human Resources', icon: '👥', moduleKey: 'human-resources' },
+  { id: 'crm', name: 'Customer Relations', icon: '🤝', moduleKey: 'customer-relationship-management' },
+  { id: 'projects', name: 'Project Management', icon: '📋', moduleKey: 'project-management' },
+  { id: 'assets', name: 'Asset Management', icon: '🏢', moduleKey: 'asset-management' },
+  { id: 'quality', name: 'Quality Management', icon: '✅', moduleKey: 'quality-management' },
+  { id: 'analytics', name: 'Analytics & BI', icon: '📈', moduleKey: 'business-intelligence-and-analytics' },
+  { id: 'specialized', name: 'Specialized Modules', icon: '🛡️', moduleKey: 'specialized-modules' },
 ];
 
 const tabs = [
@@ -31,7 +31,7 @@ const tabs = [
   'Settings'
 ];
 
-export function NavBar({ activeTab = 'Dashboard', onTabChange }: NavBarProps) {
+export function NavBar({ activeTab = 'Dashboard', onTabChange, onModuleSelect }: NavBarProps) {
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [showModuleSelector, setShowModuleSelector] = useState(false);
 
@@ -61,6 +61,7 @@ export function NavBar({ activeTab = 'Dashboard', onTabChange }: NavBarProps) {
                 onClick={() => {
                   setSelectedModule(module);
                   setShowModuleSelector(false);
+                  onModuleSelect?.(module.moduleKey);
                 }}
               >
                 <span className="text-lg">{module.icon}</span>

@@ -49,7 +49,11 @@ export function TopHeader({
   return (
     <div className="top-header">
       <div className="flex items-center gap-5">
-        <div className="flex items-center gap-2">
+        <div 
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => router.push('/dashboard')}
+          title="Go to Dashboard"
+        >
           <span className="text-lg">{companyCode}</span>
           <span className="font-semibold text-base">{companyName}</span>
         </div>
