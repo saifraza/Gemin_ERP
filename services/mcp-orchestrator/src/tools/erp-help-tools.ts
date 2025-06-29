@@ -107,29 +107,100 @@ const erpHelpHandler: ToolRequestHandler = {
         location: 'Dashboard or Operations > Production',
       },
       'navigation': {
-        title: 'ERP Navigation Guide',
-        mainSections: {
-          'Dashboard': 'Overview of all operations, KPIs, and alerts',
-          'Master Data': 'Manage companies, users, factories, and system configuration',
-          'Operations': {
-            'Production': 'Monitor production across all divisions',
-            'Quality': 'Quality control and lab results',
-            'Maintenance': 'Equipment maintenance schedules',
+        title: 'Modern ERP Navigation Guide - Comprehensive Module Structure',
+        overview: 'Our ERP system has 11 major modules with extensive sub-modules:',
+        modules: {
+          '1. Financial Management': {
+            'General Ledger': ['Chart of Accounts', 'Journal Entries', 'Financial Periods'],
+            'Accounts Payable': ['Vendor Management', 'Invoice Processing', 'Payment Processing'],
+            'Accounts Receivable': ['Customer Management', 'Billing & Invoicing', 'Collections'],
+            'Fixed Assets': 'Asset tracking and depreciation',
+            'Cash Management': 'Cash flow and treasury',
+            'Financial Reporting': 'Financial statements and reports',
+            'Budgeting & Planning': 'Budget creation and tracking',
+            'Cost Accounting': 'Cost centers and profitability',
+            'Tax Management': 'Tax compliance and reporting',
           },
-          'Supply Chain': {
-            'Procurement': 'Purchase orders and vendor management',
-            'Inventory': 'Stock levels and warehouse management',
-            'Logistics': 'Transportation and delivery tracking',
+          '2. Supply Chain Management': {
+            'Inventory Management': ['Item Master', 'Stock Control', 'Transactions'],
+            'Warehouse Management': 'Multi-location inventory',
+            'Transportation': 'Logistics and shipping',
+            'Demand Planning': 'Forecasting and planning',
+            'Supply Planning': 'Material requirements',
           },
-          'Finance': {
-            'Accounting': 'General ledger and accounts',
-            'Costing': 'Product costing and profitability',
-            'Budgeting': 'Budget planning and tracking',
+          '3. Manufacturing': {
+            'Production Planning': 'Production schedules',
+            'Manufacturing Execution': 'Shop floor management',
+            'Material Requirements': 'MRP calculations',
+            'Bill of Materials': 'Product structures',
+            'Product Lifecycle': 'PLM features',
+            'Quality Control': 'Quality inspections',
           },
-          'Sales': 'Customer orders and sales tracking',
-          'HR': 'Employee management and payroll',
-          'Reports': 'Various analytical reports',
+          '4. Human Resources': {
+            'Core HR': 'Employee records',
+            'Payroll Processing': 'Salary management',
+            'Time & Attendance': 'Time tracking',
+            'Talent Management': 'Performance and skills',
+            'Benefits Administration': 'Employee benefits',
+            'Compensation': 'Compensation planning',
+            'Employee Self-Service': 'ESS portal',
+            'HR Analytics': 'HR metrics and reports',
+          },
+          '5. Customer Relationship Management': {
+            'Sales Force Automation': 'Lead and opportunity management',
+            'Marketing Automation': 'Campaign management',
+            'Customer Service': 'Support tickets',
+            'Sales Analytics': 'Sales insights',
+            'Quote & Order Management': 'Quotations and orders',
+          },
+          '6. Project Management': {
+            'Project Planning': 'Project creation and WBS',
+            'Resource Management': 'Resource allocation',
+            'Project Budgeting': 'Cost tracking',
+            'Portfolio Management': 'Multi-project view',
+            'Time & Billing': 'Time sheets and billing',
+          },
+          '7. Asset Management': {
+            'Asset Tracking': 'Asset registry',
+            'Maintenance Management': 'Preventive maintenance',
+            'Asset Lifecycle': 'Acquisition to disposal',
+            'Spare Parts': 'Parts inventory',
+            'Fleet Management': 'Vehicle management',
+          },
+          '8. Quality Management': {
+            'Quality Planning': 'Quality standards',
+            'Quality Control': 'Inspections and testing',
+            'Non-Conformance': 'NCR management',
+            'CAPA': 'Corrective actions',
+            'Audit Management': 'Quality audits',
+            'Supplier Quality': 'Vendor quality',
+          },
+          '9. Business Intelligence & Analytics': {
+            'Data Warehouse': 'Central data repository',
+            'Advanced Analytics': 'Predictive analytics',
+            'Reporting & Dashboards': 'Custom reports',
+            'Data Visualization': 'Charts and graphs',
+            'Performance Management': 'KPI tracking',
+          },
+          '10. Specialized Modules': {
+            'Compliance & Risk': 'Regulatory compliance',
+            'Document Management': 'Document control',
+            'Environmental Health & Safety': 'EHS management',
+            'Service Management': 'Service operations',
+            'Contract Management': 'Contract lifecycle',
+            'Real Estate Management': 'Property management',
+            'Energy Management': 'Energy monitoring',
+          },
+          '11. Integration & Technical': {
+            'Integration Platform': 'API management',
+            'Workflow Management': 'Process automation',
+            'Security Management': 'Access control',
+            'System Administration': 'System configuration',
+            'System Test': 'Health monitoring',
+          },
         },
+        currentlyImplemented: ['Dashboard', 'Master Data', 'System Test'],
+        underDevelopment: ['Financial Management', 'Supply Chain Management'],
       },
     };
     
@@ -137,10 +208,38 @@ const erpHelpHandler: ToolRequestHandler = {
     const lowerTopic = topic.toLowerCase();
     let helpInfo = null;
     
-    for (const [key, content] of Object.entries(helpContent)) {
-      if (lowerTopic.includes(key) || key.includes(lowerTopic)) {
-        helpInfo = content;
-        break;
+    // Check for module count questions
+    if (lowerTopic.includes('how many modules') || lowerTopic.includes('module count') || lowerTopic.includes('modules in erp')) {
+      helpInfo = {
+        title: 'ERP Module Count',
+        answer: 'The Modern ERP system has 11 major modules',
+        modules: [
+          '1. Financial Management (9 sub-modules)',
+          '2. Supply Chain Management (5 sub-modules)',
+          '3. Manufacturing (6 sub-modules)',
+          '4. Human Resources Management (8 sub-modules)',
+          '5. Customer Relationship Management (5 sub-modules)',
+          '6. Project Management (5 sub-modules)',
+          '7. Asset Management (5 sub-modules)',
+          '8. Quality Management (6 sub-modules)',
+          '9. Business Intelligence & Analytics (5 sub-modules)',
+          '10. Specialized Modules (7 sub-modules)',
+          '11. Integration & Technical Modules (5 sub-modules)',
+        ],
+        totalSubModules: 'Total: 11 major modules with 66 sub-modules',
+        implementationStatus: {
+          'Currently Live': ['Dashboard', 'Master Data', 'System Test'],
+          'Under Development': ['Financial Management', 'Supply Chain Management'],
+          'Planned': 'Remaining modules will be implemented in phases',
+        },
+        note: 'This is a comprehensive enterprise-grade ERP system designed to handle all aspects of business operations.',
+      };
+    } else {
+      for (const [key, content] of Object.entries(helpContent)) {
+        if (lowerTopic.includes(key) || key.includes(lowerTopic)) {
+          helpInfo = content;
+          break;
+        }
       }
     }
     

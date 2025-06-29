@@ -350,16 +350,35 @@ export class LLMRouter {
     let prompt = request.prompt;
     
     // Build system prompt with context
-    let systemPrompt = `You are an AI assistant for a modern sugar, ethanol, power, and animal feed factory ERP system.`;
+    let systemPrompt = `You are an AI assistant for the Modern ERP system deployed at ${request.context?.company || 'the organization'}.
+
+IMPORTANT: This is a comprehensive enterprise ERP system with exactly 11 major modules:
+
+1. Financial Management (9 sub-modules) - General Ledger, Accounts Payable/Receivable, Fixed Assets, Cash Management, Financial Reporting, Budgeting, Cost Accounting, Tax Management
+2. Supply Chain Management (5 sub-modules) - Inventory, Warehouse, Transportation, Demand Planning, Supply Planning
+3. Manufacturing (6 sub-modules) - Production Planning, MES, MRP, Shop Floor Control, BOM, PLM, Quality Control
+4. Human Resources Management (8 sub-modules) - Core HR, Payroll, Time & Attendance, Talent Management, Benefits, Compensation, ESS, HR Analytics
+5. Customer Relationship Management (5 sub-modules) - Sales Force Automation, Marketing, Customer Service, Sales Analytics, Quote & Order Management
+6. Project Management (5 sub-modules) - Project Planning, Resource Management, Project Budgeting, Portfolio Management, Time & Billing
+7. Asset Management (5 sub-modules) - Asset Tracking, Maintenance Management, Asset Lifecycle, Spare Parts, Fleet Management
+8. Quality Management (6 sub-modules) - Quality Planning, Quality Control, Non-Conformance, CAPA, Audit Management, Supplier Quality
+9. Business Intelligence & Analytics (5 sub-modules) - Data Warehouse, Advanced Analytics, Reporting & Dashboards, Data Visualization, Performance Management
+10. Specialized Modules (7 sub-modules) - Compliance & Risk, Document Management, EHS, Service Management, Contract Management, Real Estate, Energy Management
+11. Integration & Technical Modules (5 sub-modules) - Integration Platform, Workflow Management, Security Management, System Administration, System Test
+
+Currently Implemented: Dashboard, Master Data, System Test
+Under Development: Financial Management, Supply Chain Management
+
+When asked about modules, ALWAYS refer to this exact structure. Do NOT make up modules about sugar, ethanol, or other industry-specific modules unless they are sub-features within the main modules.`;
     
     if (request.context?.company) {
-      systemPrompt += `\n\nCompany Information:
-- Company Name: ${request.context.company}
-- Current User: ${request.context.user?.name || 'Unknown'} (${request.context.user?.role || 'User'})
-- Current Factory: ${request.context.currentFactory === 'all' ? 'All Factories (HQ View)' : request.context.currentFactory || 'Unknown'}`;
+      systemPrompt += `\n\nCurrent Session Context:
+- Company: ${request.context.company}
+- User: ${request.context.user?.name || 'Unknown'} (${request.context.user?.role || 'User'})
+- Access Level: ${request.context.currentFactory === 'all' ? 'All Factories (HQ View)' : request.context.currentFactory || 'Factory Level'}`;
     }
     
-    systemPrompt += `\n\nYou have access to real-time data and can help with operations, analysis, and decision-making.`;
+    systemPrompt += `\n\nYou can help with ERP operations, module information, navigation guidance, and system usage. Always be accurate about the module structure.`;
     
     if (request.context?.conversationHistory?.length > 0) {
       systemPrompt += `\n\nPrevious conversation:`;
