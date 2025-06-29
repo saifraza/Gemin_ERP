@@ -129,7 +129,13 @@ function MasterDataContent() {
   
   // Create modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createFormData, setCreateFormData] = useState<any>({});
+  const [createFormData, setCreateFormData] = useState<any>({
+    location: {
+      address: '',
+      city: '',
+      state: ''
+    }
+  });
 
   // Update activeTab when URL changes
   useEffect(() => {
@@ -207,7 +213,13 @@ function MasterDataContent() {
         await createFactory.mutateAsync({ ...createFormData, code });
       }
       setShowCreateModal(false);
-      setCreateFormData({});
+      setCreateFormData({
+        location: {
+          address: '',
+          city: '',
+          state: ''
+        }
+      });
     } catch (error) {
       console.error('Error creating entity:', error);
     }
@@ -839,6 +851,9 @@ function MasterDataContent() {
                                   address: selectedCompany.address 
                                 }
                               });
+                              toast.success('Address copied from company');
+                            } else {
+                              toast.error('Please select a company first');
                             }
                           }}
                         >
@@ -889,7 +904,16 @@ function MasterDataContent() {
             </div>
             
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+              <Button variant="outline" onClick={() => {
+                setShowCreateModal(false);
+                setCreateFormData({
+                  location: {
+                    address: '',
+                    city: '',
+                    state: ''
+                  }
+                });
+              }}>
                 Cancel
               </Button>
               <Button onClick={handleCreate} disabled={createCompany.isPending || createUser.isPending || createFactory.isPending}>
