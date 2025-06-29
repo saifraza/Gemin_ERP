@@ -51,6 +51,7 @@ factoryRoutes.get('/', async (c) => {
     where: whereClause,
     include: {
       company: true,
+      divisions: true,
       _count: {
         select: {
           divisions: true,

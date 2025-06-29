@@ -322,3 +322,50 @@ export const useCreateFactory = () => {
     },
   });
 };
+
+// Division hooks
+export const useDivisions = (factoryId?: string) => {
+  return useQuery({
+    queryKey: ['divisions', factoryId],
+    queryFn: async () => {
+      const url = factoryId 
+        ? `${API_URL}/api/divisions?factoryId=${factoryId}`
+        : `${API_URL}/api/divisions`;
+      
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+      
+      if (!res.ok) throw new Error('Failed to fetch divisions');
+      return res.json();
+    },
+    enabled: !!factoryId,
+  });
+};
+
+export const useCreateDivision = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`${API_URL}/api/divisions`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create division');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['divisions'] });
+      queryClient.invalidateQueries({ queryKey: ['factories'] });
+      toast.success('Division created successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+};

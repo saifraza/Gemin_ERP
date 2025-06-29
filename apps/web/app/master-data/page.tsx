@@ -27,6 +27,8 @@ import {
   useCreateUser,
   useCreateFactory,
   useDeleteCompany,
+  useDivisions,
+  useCreateDivision,
 } from '@/hooks/use-master-data';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +125,15 @@ const indianStates = [
   'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
+// Division types
+const divisionTypes = [
+  { value: 'SUGAR', label: 'Sugar Division', code: 'SUG' },
+  { value: 'ETHANOL', label: 'Ethanol Division', code: 'ETH' },
+  { value: 'POWER', label: 'Power Division', code: 'PWR' },
+  { value: 'FEED', label: 'Feed Division', code: 'FED' },
+  { value: 'COMMON', label: 'Common Division', code: 'CMN' }
+];
+
 function MasterDataContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -140,6 +151,7 @@ function MasterDataContent() {
       state: ''
     }
   });
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string | null>(null);
 
   // Update activeTab when URL changes
   useEffect(() => {
@@ -202,7 +214,11 @@ function MasterDataContent() {
   const createCompany = useCreateCompany();
   const createUser = useCreateUser();
   const createFactory = useCreateFactory();
+  const createDivision = useCreateDivision();
   const deleteCompany = useDeleteCompany();
+  
+  // Division data
+  const { data: divisions } = useDivisions(selectedBusinessUnit || undefined);
   
   // Handle create
   const handleCreate = async () => {
@@ -285,6 +301,22 @@ function MasterDataContent() {
         };
         
         await createFactory.mutateAsync(factoryData);
+      } else if (activeTab === 'divisions') {
+        // Ensure required fields are provided
+        if (!createFormData.name || !createFormData.code || !createFormData.type || !createFormData.factoryId) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
+        
+        const divisionData = {
+          name: createFormData.name,
+          code: createFormData.code,
+          type: createFormData.type,
+          factoryId: createFormData.factoryId,
+          isActive: createFormData.isActive !== false
+        };
+        
+        await createDivision.mutateAsync(divisionData);
       }
       setShowCreateModal(false);
       setCreateFormData({
@@ -536,6 +568,7 @@ function MasterDataContent() {
             onClick={() => handleTabChange('divisions')}
             icon={<Network className="w-4 h-4" />}
             label="Divisions"
+            count={(factories.reduce((acc: number, f: any) => acc + (f._count?.divisions || 0), 0))}
           />
           <TabButton
             isActive={activeTab === 'access'}
@@ -583,7 +616,7 @@ function MasterDataContent() {
             </Button>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business' : 'New'}
+              Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business' : activeTab === 'divisions' ? 'Division' : 'New'}
             </Button>
           </div>
         </div>
@@ -648,11 +681,97 @@ function MasterDataContent() {
           )}
           
           {activeTab === 'divisions' && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="text-gray-500 mb-2">Divisions Management</div>
-                <p className="text-sm text-gray-400">Coming soon</p>
-              </div>
+            <div className="p-6">
+              {factories.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-center">
+                    <div className="text-gray-500 mb-2">No Business Units Found</div>
+                    <p className="text-sm text-gray-400">Create a business unit first to add divisions</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="mb-4">
+                    <Label htmlFor="businessUnit">Select Business Unit</Label>
+                    <Select 
+                      value={selectedBusinessUnit || ''} 
+                      onValueChange={(value) => setSelectedBusinessUnit(value)}
+                    >
+                      <SelectTrigger className="w-full md:w-1/3">
+                        <SelectValue placeholder="Select a business unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {factories.map((factory: any) => (
+                          <SelectItem key={factory.id} value={factory.id}>
+                            {factory.name} ({factory.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {selectedBusinessUnit && (
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Divisions</h3>
+                        <Button onClick={() => {
+                          setCreateFormData({ factoryId: selectedBusinessUnit });
+                          setShowCreateModal(true);
+                        }}>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Division
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {divisionTypes.map((divType) => {
+                          const factory = factories.find((f: any) => f.id === selectedBusinessUnit);
+                          const hasDivision = factory?.divisions?.some((d: any) => d.type === divType.value);
+                          
+                          return (
+                            <Card key={divType.value} className={`p-4 ${hasDivision ? 'border-green-500' : 'border-gray-200'}`}>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium text-lg">{divType.label}</h4>
+                                  <p className="text-sm text-gray-500">{divType.code}</p>
+                                </div>
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                  hasDivision ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                                }`}>
+                                  {hasDivision ? '✓' : '+'}
+                                </div>
+                              </div>
+                              {hasDivision ? (
+                                <div className="mt-3">
+                                  <Badge variant="default">Active</Badge>
+                                </div>
+                              ) : (
+                                <div className="mt-3">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setCreateFormData({ 
+                                        factoryId: selectedBusinessUnit,
+                                        type: divType.value,
+                                        name: divType.label,
+                                        code: divType.code
+                                      });
+                                      setShowCreateModal(true);
+                                    }}
+                                  >
+                                    Create
+                                  </Button>
+                                </div>
+                              )}
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
@@ -671,10 +790,10 @@ function MasterDataContent() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                Create New {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : 'Business Unit'}
+                Create New {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business Unit' : 'Division'}
               </DialogTitle>
               <DialogDescription>
-                Fill in the details below to create a new {activeTab === 'companies' ? 'company' : activeTab === 'users' ? 'user' : 'business unit'}.
+                Fill in the details below to create a new {activeTab === 'companies' ? 'company' : activeTab === 'users' ? 'user' : activeTab === 'factories' ? 'business unit' : 'division'}.
               </DialogDescription>
             </DialogHeader>
             
@@ -1062,6 +1181,95 @@ function MasterDataContent() {
                   )}
                 </>
               )}
+              
+              {/* Division Form */}
+              {activeTab === 'divisions' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="divisionName">Division Name</Label>
+                      <Input
+                        id="divisionName"
+                        value={createFormData.name || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                        placeholder="Enter division name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="divisionCode">Division Code</Label>
+                      <Input
+                        id="divisionCode"
+                        value={createFormData.code || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
+                        placeholder="Enter division code"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="divisionType">Division Type</Label>
+                      <Select 
+                        value={createFormData.type || ''} 
+                        onValueChange={(value) => {
+                          const division = divisionTypes.find(d => d.value === value);
+                          if (division) {
+                            setCreateFormData({ 
+                              ...createFormData, 
+                              type: value,
+                              name: division.label,
+                              code: division.code
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select division type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {divisionTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="businessUnit">Business Unit</Label>
+                      <Select 
+                        value={createFormData.factoryId || ''} 
+                        onValueChange={(value) => setCreateFormData({ ...createFormData, factoryId: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select business unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {factories.map((factory: any) => (
+                            <SelectItem key={factory.id} value={factory.id}>
+                              {factory.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="isActive">Status</Label>
+                    <Select 
+                      value={createFormData.isActive !== false ? 'true' : 'false'} 
+                      onValueChange={(value) => setCreateFormData({ ...createFormData, isActive: value === 'true' })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Active</SelectItem>
+                        <SelectItem value="false">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
             
             <DialogFooter>
@@ -1077,8 +1285,8 @@ function MasterDataContent() {
               }}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={createCompany.isPending || createUser.isPending || createFactory.isPending}>
-                {(createCompany.isPending || createUser.isPending || createFactory.isPending) ? 'Creating...' : 'Create'}
+              <Button onClick={handleCreate} disabled={createCompany.isPending || createUser.isPending || createFactory.isPending || createDivision.isPending}>
+                {(createCompany.isPending || createUser.isPending || createFactory.isPending || createDivision.isPending) ? 'Creating...' : 'Create'}
               </Button>
             </DialogFooter>
           </DialogContent>

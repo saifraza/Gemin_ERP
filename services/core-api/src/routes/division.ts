@@ -2,12 +2,44 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
+import { jwtVerify } from 'jose';
 
 const divisionRoutes = new Hono();
 
+// JWT secret (same as auth routes)
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+);
+
+// Apply JWT middleware to protected routes
+divisionRoutes.use('*', async (c, next) => {
+  try {
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'No token provided' }, 401);
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const { payload } = await jwtVerify(token, secret);
+    
+    // Set the payload for use in routes
+    c.set('jwtPayload', payload);
+    
+    await next();
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return c.json({ error: 'Invalid token' }, 401);
+  }
+});
+
 // Get all divisions
 divisionRoutes.get('/', async (c) => {
+  const factoryId = c.req.query('factoryId');
+  
+  const whereClause = factoryId ? { factoryId } : {};
+  
   const divisions = await prisma.division.findMany({
+    where: whereClause,
     include: {
       factory: true,
       _count: {
@@ -28,7 +60,7 @@ const createDivisionSchema = z.object({
   code: z.string().min(1),
   type: z.enum(['SUGAR', 'ETHANOL', 'POWER', 'FEED', 'COMMON']),
   factoryId: z.string(),
-  description: z.string().optional(),
+  isActive: z.boolean().optional().default(true),
 });
 
 // Get division by ID
