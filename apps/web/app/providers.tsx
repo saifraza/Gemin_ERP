@@ -1,10 +1,29 @@
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'sonner';
 
 interface ProvidersProps {
   children: ReactNode;
 }
+
+// Create a client outside of the component to prevent recreation on every render
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Stale time: Data is fresh for 1 minute
+      staleTime: 60 * 1000,
+      // Cache time: Keep in cache for 5 minutes
+      gcTime: 5 * 60 * 1000,
+      // Retry failed requests 3 times
+      retry: 3,
+      // Refetch on window focus
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 export function Providers({ children }: ProvidersProps) {
   const [isClient, setIsClient] = useState(false);
@@ -18,5 +37,11 @@ export function Providers({ children }: ProvidersProps) {
     return <div suppressHydrationWarning>{children}</div>;
   }
 
-  return <>{children}</>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Toaster richColors position="top-right" />
+      {children}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+    </QueryClientProvider>
+  );
 }

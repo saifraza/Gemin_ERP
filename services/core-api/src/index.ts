@@ -9,7 +9,7 @@ import { PostgreSQLCache } from './shared/cache/index.js';
 
 // Routes
 import { authRoutes } from './routes/auth.js';
-import { companyRoutes } from './routes/company.js';
+import { companyRoutes } from './routes/company-paginated.js';
 import { userRoutes } from './routes/user.js';
 import { factoryRoutes } from './routes/factory.js';
 import { divisionRoutes } from './routes/division.js';
