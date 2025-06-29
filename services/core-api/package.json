@@ -10,8 +10,7 @@
     "test": "vitest",
     "type-check": "tsc --noEmit",
     "db:migrate": "npx prisma migrate deploy --schema=../../packages/database/prisma/schema.prisma",
-    "db:generate": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma",
-    
+    "db:generate": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma"
   },
   "dependencies": {
     "hono": "^4.0.0",
