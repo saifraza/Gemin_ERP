@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Trash2, Edit, Building2, Users, Factory } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -190,15 +191,18 @@ export default function MasterDataPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div>Loading master data...</div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div>Loading master data...</div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <DashboardLayout>
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Master Data Management</h1>
           <p className="text-gray-600">Manage all companies, users, and factories in the system</p>
@@ -527,6 +531,7 @@ export default function MasterDataPage() {
           )}
         </Card>
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

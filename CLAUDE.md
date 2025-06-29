@@ -107,20 +107,28 @@ When implementing new modules, follow this process:
 - Example: `/finance/gl/chart-of-accounts` for Chart of Accounts under General Ledger
 
 #### 2. Create Module Components
+- **IMPORTANT**: All module pages MUST use the `DashboardLayout` component
+- Copy the template from `apps/web/MODULE_PAGE_TEMPLATE.tsx`
+- This ensures consistent navigation (sidebar, top header, nav bar) across all pages
+
 ```typescript
-// Standard module page structure
+// Standard module page structure with DashboardLayout
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+
 export default function ModulePage() {
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Module Title</h1>
-        <p className="text-gray-600 mt-1">Module description</p>
+    <DashboardLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Module Title</h1>
+          <p className="text-gray-600 mt-1">Module description</p>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Module content */}
+        </div>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Module content */}
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }
 ```

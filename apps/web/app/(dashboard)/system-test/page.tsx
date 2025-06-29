@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Check, X, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 
 interface ServiceStatus {
   name: string;
@@ -111,7 +112,8 @@ export default function SystemTestPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <DashboardLayout>
+      <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">System Test</h1>
         <p className="text-gray-600 mt-1">
@@ -216,5 +218,6 @@ export default function SystemTestPage() {
         </CardContent>
       </Card>
     </div>
+    </DashboardLayout>
   );
 }
