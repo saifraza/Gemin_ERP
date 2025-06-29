@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { factoryAccessMiddleware, getFactoryContext } from '../middleware/factory-access.js';
+import { requireRead, requireCreate, requireUpdate, requireDelete } from '../middleware/rbac.js';
 
 const companyRoutes = new Hono();
 
@@ -20,25 +21,58 @@ const paginationSchema = z.object({
 });
 
 // Get all companies with pagination, search, and sorting
-companyRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
+companyRoutes.get('/', requireRead(), zValidator('query', paginationSchema), async (c) => {
   const { page, limit, search, sortBy, sortOrder } = c.req.valid('query');
   const context = getFactoryContext(c);
+  const userPermissions = c.get('userPermissions');
   
   // Calculate offset
   const offset = (page - 1) * limit;
   
-  // Build where clause
-  const whereClause: any = context.role === 'SUPER_ADMIN' 
-    ? {} 
-    : { id: context.companyId };
+  // Build where clause based on user permissions
+  let whereClause: any = {};
+  
+  // Check if user has global company access
+  const hasGlobalAccess = userPermissions?.permissions?.some((p: any) => 
+    p.code === 'COMPANIES_READ' && p.scope === 'GLOBAL'
+  );
+  
+  if (!hasGlobalAccess) {
+    // Filter by company-level permissions
+    const companyIds = userPermissions?.permissions
+      ?.filter((p: any) => p.code === 'COMPANIES_READ' && p.scope === 'COMPANY')
+      ?.map((p: any) => p.scopeId)
+      ?.filter(Boolean) || [];
+    
+    if (companyIds.length > 0) {
+      whereClause.id = { in: companyIds };
+    } else if (context.companyId) {
+      // Fallback to context company
+      whereClause.id = context.companyId;
+    } else {
+      // No access
+      whereClause.id = 'no-access';
+    }
+  }
   
   // Add search condition if provided
   if (search) {
-    whereClause.OR = [
+    const searchConditions = [
       { name: { contains: search, mode: 'insensitive' } },
       { code: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
     ];
+    
+    if (whereClause.id) {
+      whereClause = {
+        AND: [
+          whereClause,
+          { OR: searchConditions }
+        ]
+      };
+    } else {
+      whereClause.OR = searchConditions;
+    }
   }
   
   // Execute queries in parallel for better performance
@@ -81,7 +115,7 @@ companyRoutes.get('/', zValidator('query', paginationSchema), async (c) => {
 });
 
 // Get company by ID (optimized with select)
-companyRoutes.get('/:id', async (c) => {
+companyRoutes.get('/:id', requireRead('COMPANY', 'id'), async (c) => {
   const id = c.req.param('id');
   const context = getFactoryContext(c);
   
@@ -122,7 +156,7 @@ const createCompanySchema = z.object({
 });
 
 // Create company
-companyRoutes.post('/', zValidator('json', createCompanySchema), async (c) => {
+companyRoutes.post('/', requireCreate('COMPANY'), zValidator('json', createCompanySchema), async (c) => {
   const data = c.req.valid('json');
   const context = getFactoryContext(c);
   
@@ -154,7 +188,7 @@ companyRoutes.post('/', zValidator('json', createCompanySchema), async (c) => {
 });
 
 // Update company
-companyRoutes.put('/:id', zValidator('json', createCompanySchema.partial()), async (c) => {
+companyRoutes.put('/:id', requireUpdate('COMPANY', 'id'), zValidator('json', createCompanySchema.partial()), async (c) => {
   const id = c.req.param('id');
   const data = c.req.valid('json');
   const context = getFactoryContext(c);
@@ -188,7 +222,7 @@ companyRoutes.put('/:id', zValidator('json', createCompanySchema.partial()), asy
 });
 
 // Delete company
-companyRoutes.delete('/:id', async (c) => {
+companyRoutes.delete('/:id', requireDelete('COMPANY', 'id'), async (c) => {
   const id = c.req.param('id');
   const context = getFactoryContext(c);
   

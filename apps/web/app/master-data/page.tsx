@@ -33,6 +33,7 @@ import {
   useCreateDivision,
 } from '@/hooks/use-master-data';
 import { usePrefetchMasterData } from '@/hooks/use-prefetch-data';
+import { useRoles, useModules, useUserPermissions, useAssignUserRole, useCreateRole } from '@/hooks/use-rbac';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -1015,14 +1016,7 @@ function MasterDataContent() {
             </div>
           )}
           
-          {activeTab === 'access' && (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="text-gray-500 mb-2">Access Control</div>
-                <p className="text-sm text-gray-400">Coming soon</p>
-              </div>
-            </div>
-          )}
+          {activeTab === 'access' && <AccessControlTab />}
         </Card>
         
         {/* Create Modal */}
@@ -1963,6 +1957,383 @@ function MasterDataContent() {
         </Dialog>
       </div>
     </DashboardLayout>
+  );
+}
+
+// Access Control Tab Component
+function AccessControlTab() {
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [roleTab, setRoleTab] = useState<'roles' | 'permissions'>('roles');
+  const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [selectedScope, setSelectedScope] = useState<string>('GLOBAL');
+  const [selectedScopeId, setSelectedScopeId] = useState<string>('');
+  const [createRoleData, setCreateRoleData] = useState({
+    name: '',
+    description: '',
+    level: 50,
+    parentId: ''
+  });
+  
+  // Fetch data
+  const { data: roles, isLoading: loadingRoles } = useRoles();
+  const { data: modules, isLoading: loadingModules } = useModules();
+  const { data: users } = useUsers({ search: '' });
+  const { data: userPermissions } = useUserPermissions(selectedUser || undefined);
+  const { data: companies } = useCompanies({ search: '' });
+  const { data: factories } = useFactories({ search: '' });
+  const { data: divisions } = useDivisions({ search: '' });
+  
+  // Mutations
+  const assignRole = useAssignUserRole();
+  const createRole = useCreateRole();
+  
+  const allUsers = users?.pages?.flatMap((page: any) => page.data) || [];
+  const allCompanies = companies?.pages?.flatMap((page: any) => page.data) || [];
+  const allFactories = factories?.pages?.flatMap((page: any) => page.data) || [];
+  const allDivisions = divisions?.pages?.flatMap((page: any) => page.data) || [];
+
+  return (
+    <div className="p-6">
+      {/* Sub tabs */}
+      <div className="flex gap-4 mb-6 border-b">
+        <button
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            roleTab === 'roles' 
+              ? 'border-blue-500 text-blue-600' 
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+          onClick={() => setRoleTab('roles')}
+        >
+          Roles & Hierarchy
+        </button>
+        <button
+          className={`pb-2 px-1 border-b-2 transition-colors ${
+            roleTab === 'permissions' 
+              ? 'border-blue-500 text-blue-600' 
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+          onClick={() => setRoleTab('permissions')}
+        >
+          User Permissions
+        </button>
+      </div>
+
+      {roleTab === 'roles' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Roles List */}
+          <div className="lg:col-span-2">
+            <h3 className="text-lg font-semibold mb-4">Role Hierarchy</h3>
+            {loadingRoles ? (
+              <div className="text-center py-8 text-gray-500">Loading roles...</div>
+            ) : (
+              <div className="space-y-4">
+                {roles?.map((role: any) => (
+                  <Card key={role.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-lg">{role.name}</h4>
+                        <p className="text-sm text-gray-600">{role.description}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <Badge variant="outline">Level: {role.level}</Badge>
+                          {role.parent && (
+                            <span className="text-sm text-gray-500">
+                              Reports to: {role.parent.name}
+                            </span>
+                          )}
+                          <span className="text-sm text-gray-500">
+                            {role._count.userRoles} users
+                          </span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">
+                        Manage Permissions ({role._count.permissions})
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Create Role */}
+          <div>
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => setShowCreateRoleModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New Role
+                </Button>
+                <Button className="w-full" variant="outline">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Manage Modules
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {roleTab === 'permissions' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* User List */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Select User</h3>
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {allUsers.map((user: any) => (
+                <Card
+                  key={user.id}
+                  className={`p-3 cursor-pointer transition-colors ${
+                    selectedUser === user.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => setSelectedUser(user.id)}
+                >
+                  <div>
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-sm text-gray-600">{user.email}</p>
+                    <Badge variant="outline" className="mt-1">{user.role}</Badge>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* User Permissions */}
+          <div className="lg:col-span-2">
+            {selectedUser ? (
+              <>
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold">User Permissions</h3>
+                  {userPermissions && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600">
+                        User: <strong>{userPermissions.user.name}</strong>
+                      </p>
+                      <div className="flex gap-2 mt-2">
+                        {userPermissions.user.roles.map((role: any) => (
+                          <Badge key={role.id} variant="default">
+                            {role.name} ({role.scope})
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Assign Role */}
+                <Card className="p-4 mb-4">
+                  <h4 className="font-medium mb-3">Assign Role</h4>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Select value={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles?.map((role: any) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={selectedScope} onValueChange={setSelectedScope}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Scope" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="GLOBAL">Global</SelectItem>
+                          <SelectItem value="COMPANY">Company</SelectItem>
+                          <SelectItem value="FACTORY">Factory</SelectItem>
+                          <SelectItem value="DIVISION">Division</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {selectedScope !== 'GLOBAL' && (
+                      <Select value={selectedScopeId} onValueChange={setSelectedScopeId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Select ${selectedScope.toLowerCase()}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedScope === 'COMPANY' && allCompanies.map((company: any) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                          {selectedScope === 'FACTORY' && allFactories.map((factory: any) => (
+                            <SelectItem key={factory.id} value={factory.id}>
+                              {factory.name}
+                            </SelectItem>
+                          ))}
+                          {selectedScope === 'DIVISION' && allDivisions.map((division: any) => (
+                            <SelectItem key={division.id} value={division.id}>
+                              {division.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    <Button 
+                      className="w-full"
+                      onClick={() => {
+                        if (selectedRole && selectedUser) {
+                          assignRole.mutate({
+                            userId: selectedUser,
+                            roleId: selectedRole,
+                            scope: selectedScope,
+                            scopeId: selectedScope !== 'GLOBAL' ? selectedScopeId : undefined
+                          });
+                        }
+                      }}
+                      disabled={!selectedRole || !selectedUser || assignRole.isPending}
+                    >
+                      {assignRole.isPending ? 'Assigning...' : 'Assign Role'}
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Permissions List */}
+                <Card className="p-4">
+                  <h4 className="font-medium mb-3">Current Permissions</h4>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {userPermissions?.permissions?.map((perm: any) => (
+                      <div key={perm.code} className="flex items-center justify-between p-2 border rounded">
+                        <div>
+                          <p className="font-medium">{perm.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {perm.module.name} {perm.subModule && `> ${perm.subModule.name}`}
+                          </p>
+                          <div className="flex gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {perm.action}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {perm.scope} {perm.scopeId && `(${perm.scopeId})`}
+                            </Badge>
+                            {perm.fromRole && (
+                              <Badge variant="default" className="text-xs">
+                                From: {perm.fromRole}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {perm.isOverride && (
+                          <Button size="sm" variant="ghost" className="text-red-600">
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-gray-500">
+                Select a user to view permissions
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Create Role Modal */}
+      <Dialog open={showCreateRoleModal} onOpenChange={setShowCreateRoleModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Role</DialogTitle>
+            <DialogDescription>
+              Define a new role with specific permissions and hierarchy
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input
+                id="role-name"
+                value={createRoleData.name}
+                onChange={(e) => setCreateRoleData({...createRoleData, name: e.target.value})}
+                placeholder="e.g., Plant Manager"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="role-description">Description</Label>
+              <Input
+                id="role-description"
+                value={createRoleData.description}
+                onChange={(e) => setCreateRoleData({...createRoleData, description: e.target.value})}
+                placeholder="Brief description of the role"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="role-level">Hierarchy Level (0-100)</Label>
+              <Input
+                id="role-level"
+                type="number"
+                min="0"
+                max="100"
+                value={createRoleData.level}
+                onChange={(e) => setCreateRoleData({...createRoleData, level: parseInt(e.target.value) || 0})}
+              />
+              <p className="text-sm text-gray-600 mt-1">
+                Higher numbers indicate higher authority (MD=100, Operator=50)
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="parent-role">Parent Role (Optional)</Label>
+              <Select value={createRoleData.parentId} onValueChange={(value) => setCreateRoleData({...createRoleData, parentId: value})}>
+                <SelectTrigger id="parent-role">
+                  <SelectValue placeholder="Select parent role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {roles?.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name} (Level {role.level})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowCreateRoleModal(false);
+              setCreateRoleData({ name: '', description: '', level: 50, parentId: '' });
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                createRole.mutate({
+                  ...createRoleData,
+                  parentId: createRoleData.parentId || undefined
+                }, {
+                  onSuccess: () => {
+                    setShowCreateRoleModal(false);
+                    setCreateRoleData({ name: '', description: '', level: 50, parentId: '' });
+                  }
+                });
+              }}
+              disabled={!createRoleData.name || createRole.isPending}
+            >
+              {createRole.isPending ? 'Creating...' : 'Create Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 

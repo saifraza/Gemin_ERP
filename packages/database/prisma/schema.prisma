@@ -56,7 +56,7 @@ model User {
   email         String   @unique
   username      String   @unique
   passwordHash  String
-  role          Role
+  role          Role     @default(VIEWER) // Default system role
   name          String
   phone         String?
   avatar        String?
@@ -65,11 +65,161 @@ model User {
   company       Company  @relation(fields: [companyId], references: [id])
   sessions      Session[]
   activities    ActivityLog[]
+  userRoles     UserRole[]
+  userPermissions UserPermission[]
+  resourceAccess ResourceAccess[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
   @@index([email, username])
+}
+
+// ==================== RBAC MODELS ====================
+
+model RoleDefinition {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  level       Int      // Hierarchy level (100=MD, 90=CTO, 80=Director, 70=Manager, etc.)
+  parentId    String?  // For role hierarchy
+  isSystem    Boolean  @default(false) // System roles can't be deleted
+  
+  parent      RoleDefinition? @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children    RoleDefinition[] @relation("RoleHierarchy")
+  permissions RolePermission[]
+  userRoles   UserRole[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([level])
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  icon        String?
+  path        String?  // Frontend route path
+  isActive    Boolean  @default(true)
+  
+  subModules  SubModule[]
+  permissions Permission[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SubModule {
+  id          String   @id @default(cuid())
+  moduleId    String
+  name        String
+  code        String
+  description String?
+  path        String?
+  isActive    Boolean  @default(true)
+  
+  module      Module   @relation(fields: [moduleId], references: [id])
+  permissions Permission[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([moduleId, code])
+}
+
+model Permission {
+  id           String   @id @default(cuid())
+  moduleId     String
+  subModuleId  String?
+  name         String
+  code         String   @unique
+  action       PermissionAction
+  description  String?
+  
+  module       Module   @relation(fields: [moduleId], references: [id])
+  subModule    SubModule? @relation(fields: [subModuleId], references: [id])
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([moduleId, action])
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  granted      Boolean  @default(true)
+  conditions   Json?    // Additional conditions for the permission
+  
+  role         RoleDefinition @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  scope      AccessScope
+  scopeId    String?  // ID of company/factory/division based on scope
+  validFrom  DateTime @default(now())
+  validUntil DateTime?
+  isActive   Boolean  @default(true)
+  
+  user       User     @relation(fields: [userId], references: [id])
+  role       RoleDefinition @relation(fields: [roleId], references: [id])
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([userId, isActive])
+  @@unique([userId, roleId, scope, scopeId])
+}
+
+model UserPermission {
+  id           String   @id @default(cuid())
+  userId       String
+  permissionId String
+  granted      Boolean  // true = grant, false = revoke
+  scope        AccessScope
+  scopeId      String?
+  reason       String?  // Why this override was added
+  grantedBy    String?  // Admin who granted this
+  
+  user         User     @relation(fields: [userId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime?
+  
+  @@index([userId, permissionId])
+}
+
+model ResourceAccess {
+  id           String   @id @default(cuid())
+  userId       String
+  resourceType ResourceType
+  resourceId   String
+  accessLevel  AccessLevel
+  conditions   Json?    // Additional access conditions
+  
+  user         User     @relation(fields: [userId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime?
+  
+  @@index([userId, resourceType, resourceId])
+  @@unique([userId, resourceType, resourceId])
 }
 
 // ==================== MCP & AI MODELS ====================
@@ -401,4 +551,39 @@ enum MaintenanceType {
   CORRECTIVE
   PREDICTIVE
   EMERGENCY
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  EXPORT
+  IMPORT
+  EXECUTE
+}
+
+enum AccessScope {
+  GLOBAL       // System-wide access
+  COMPANY      // Company level
+  FACTORY      // Factory/Business Unit level
+  DIVISION     // Division level
+  DEPARTMENT   // Department level
+}
+
+enum ResourceType {
+  REPORT
+  DOCUMENT
+  WORKFLOW
+  DATA_EXPORT
+  CONFIGURATION
+}
+
+enum AccessLevel {
+  VIEW
+  EDIT
+  ADMIN
+  OWNER
 }

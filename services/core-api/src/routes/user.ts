@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { prisma } from '../index.js';
 import { jwtVerify } from 'jose';
+import { requireModulePermission } from '../middleware/rbac.js';
 
 const userRoutes = new Hono();
 
@@ -53,7 +54,7 @@ userRoutes.use('*', async (c, next) => {
 });
 
 // Get all users
-userRoutes.get('/', async (c) => {
+userRoutes.get('/', requireModulePermission('USERS', 'READ'), async (c) => {
   try {
     // Get user context from JWT
     const userPayload = c.get('jwtPayload');
@@ -124,7 +125,7 @@ userRoutes.get('/', async (c) => {
 });
 
 // Delete a user
-userRoutes.delete('/:id', async (c) => {
+userRoutes.delete('/:id', requireModulePermission('USERS', 'DELETE'), async (c) => {
   try {
     const { id } = c.req.param();
     

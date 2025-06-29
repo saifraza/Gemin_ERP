@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { jwtVerify } from 'jose';
+import { requireModulePermission } from '../middleware/rbac.js';
 
 const factoryRoutes = new Hono();
 
@@ -33,19 +34,56 @@ factoryRoutes.use('*', async (c, next) => {
 });
 
 // Get all factories
-factoryRoutes.get('/', async (c) => {
-  // Get user context from JWT
+factoryRoutes.get('/', requireModulePermission('BUSINESS_UNITS', 'READ'), async (c) => {
+  // Get user context and permissions
   const userPayload = c.get('jwtPayload');
+  const userPermissions = c.get('userPermissions');
   const currentUser = await prisma.user.findUnique({
     where: { id: userPayload.id },
     select: { role: true, companyId: true }
   });
   
-  // Super admins can see all factories
-  // Regular users can only see factories from their company
-  const whereClause = currentUser?.role === 'SUPER_ADMIN' 
-    ? {} 
-    : { companyId: currentUser?.companyId };
+  // Build where clause based on user permissions
+  let whereClause: any = {};
+  
+  // Check if user has global access
+  const hasGlobalAccess = userPermissions?.permissions?.some((p: any) => 
+    p.code === 'BUSINESS_UNITS_READ' && p.scope === 'GLOBAL'
+  );
+  
+  if (!hasGlobalAccess) {
+    const conditions = [];
+    
+    // Company-level access
+    const companyIds = userPermissions?.permissions
+      ?.filter((p: any) => p.code === 'BUSINESS_UNITS_READ' && p.scope === 'COMPANY')
+      ?.map((p: any) => p.scopeId)
+      ?.filter(Boolean) || [];
+    
+    if (companyIds.length > 0) {
+      conditions.push({ companyId: { in: companyIds } });
+    }
+    
+    // Factory-level access
+    const factoryIds = userPermissions?.permissions
+      ?.filter((p: any) => p.code === 'BUSINESS_UNITS_READ' && p.scope === 'FACTORY')
+      ?.map((p: any) => p.scopeId)
+      ?.filter(Boolean) || [];
+    
+    if (factoryIds.length > 0) {
+      conditions.push({ id: { in: factoryIds } });
+    }
+    
+    if (conditions.length > 0) {
+      whereClause.OR = conditions;
+    } else if (currentUser?.companyId) {
+      // Fallback to user's company
+      whereClause.companyId = currentUser.companyId;
+    } else {
+      // No access
+      whereClause.id = 'no-access';
+    }
+  }
   
   const factories = await prisma.factory.findMany({
     where: whereClause,
@@ -96,7 +134,7 @@ factoryRoutes.get('/:id', async (c) => {
 });
 
 // Create factory
-factoryRoutes.post('/', zValidator('json', createFactorySchema), async (c) => {
+factoryRoutes.post('/', requireModulePermission('BUSINESS_UNITS', 'CREATE'), zValidator('json', createFactorySchema), async (c) => {
   const data = c.req.valid('json');
   
   try {
@@ -120,7 +158,7 @@ factoryRoutes.post('/', zValidator('json', createFactorySchema), async (c) => {
 });
 
 // Update factory
-factoryRoutes.put('/:id', zValidator('json', createFactorySchema.partial()), async (c) => {
+factoryRoutes.put('/:id', requireModulePermission('BUSINESS_UNITS', 'UPDATE', 'FACTORY', 'id'), zValidator('json', createFactorySchema.partial()), async (c) => {
   const id = c.req.param('id');
   const data = c.req.valid('json');
   
@@ -143,7 +181,7 @@ factoryRoutes.put('/:id', zValidator('json', createFactorySchema.partial()), asy
 });
 
 // Delete factory
-factoryRoutes.delete('/:id', async (c) => {
+factoryRoutes.delete('/:id', requireModulePermission('BUSINESS_UNITS', 'DELETE', 'FACTORY', 'id'), async (c) => {
   const id = c.req.param('id');
   
   try {
