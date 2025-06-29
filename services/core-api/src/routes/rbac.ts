@@ -33,23 +33,34 @@ rbacRoutes.use('*', async (c, next) => {
 
 // Get all roles
 rbacRoutes.get('/roles', async (c) => {
-  const roles = await prisma.roleDefinition.findMany({
-    include: {
-      parent: true,
-      children: true,
-      _count: {
-        select: {
-          userRoles: true,
-          permissions: true
+  try {
+    const roles = await prisma.roleDefinition.findMany({
+      include: {
+        parent: true,
+        children: true,
+        _count: {
+          select: {
+            userRoles: true,
+            permissions: true
+          }
         }
+      },
+      orderBy: {
+        level: 'desc'
       }
-    },
-    orderBy: {
-      level: 'desc'
+    });
+    
+    return c.json(roles);
+  } catch (error: any) {
+    console.error('Error fetching roles:', error);
+    if (error.code === 'P2021') {
+      return c.json({ 
+        error: 'RBAC tables not found. Please run /api/rbac-init/init first.',
+        needsInit: true 
+      }, 503);
     }
-  });
-  
-  return c.json(roles);
+    return c.json({ error: 'Failed to fetch roles' }, 500);
+  }
 });
 
 // Create role schema
@@ -90,21 +101,32 @@ rbacRoutes.post('/roles', zValidator('json', createRoleSchema), async (c) => {
 
 // Get all modules
 rbacRoutes.get('/modules', async (c) => {
-  const modules = await prisma.module.findMany({
-    include: {
-      subModules: true,
-      permissions: {
-        include: {
-          subModule: true
+  try {
+    const modules = await prisma.module.findMany({
+      include: {
+        subModules: true,
+        permissions: {
+          include: {
+            subModule: true
+          }
         }
+      },
+      where: {
+        isActive: true
       }
-    },
-    where: {
-      isActive: true
+    });
+    
+    return c.json(modules);
+  } catch (error: any) {
+    console.error('Error fetching modules:', error);
+    if (error.code === 'P2021') {
+      return c.json({ 
+        error: 'RBAC tables not found. Please run /api/rbac-init/init first.',
+        needsInit: true 
+      }, 503);
     }
-  });
-  
-  return c.json(modules);
+    return c.json({ error: 'Failed to fetch modules' }, 500);
+  }
 });
 
 // Create module schema
@@ -222,106 +244,117 @@ rbacRoutes.post('/roles/permissions', zValidator('json', assignPermissionsSchema
 rbacRoutes.get('/users/:userId/permissions', async (c) => {
   const userId = c.req.param('userId');
   
-  // Get user with roles
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      userRoles: {
-        where: {
-          isActive: true,
-          OR: [
-            { validUntil: null },
-            { validUntil: { gt: new Date() } }
-          ]
-        },
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: {
-                    include: {
-                      module: true,
-                      subModule: true
+  try {
+    // Get user with roles
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          where: {
+            isActive: true,
+            OR: [
+              { validUntil: null },
+              { validUntil: { gt: new Date() } }
+            ]
+          },
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: {
+                      include: {
+                        module: true,
+                        subModule: true
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
-      },
-      userPermissions: {
-        where: {
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: new Date() } }
-          ]
         },
-        include: {
-          permission: {
-            include: {
-              module: true,
-              subModule: true
+        userPermissions: {
+          where: {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } }
+            ]
+          },
+          include: {
+            permission: {
+              include: {
+                module: true,
+                subModule: true
+              }
             }
           }
         }
       }
+    });
+    
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
     }
-  });
-  
-  if (!user) {
-    return c.json({ error: 'User not found' }, 404);
-  }
-  
-  // Compile all permissions
-  const permissions = new Map();
-  
-  // Add role permissions
-  for (const userRole of user.userRoles) {
-    for (const rolePerm of userRole.role.permissions) {
-      if (rolePerm.granted) {
-        const key = `${rolePerm.permission.code}_${userRole.scope}_${userRole.scopeId || 'all'}`;
-        permissions.set(key, {
-          ...rolePerm.permission,
-          scope: userRole.scope,
-          scopeId: userRole.scopeId,
-          fromRole: userRole.role.name
-        });
+    
+    // Compile all permissions
+    const permissions = new Map();
+    
+    // Add role permissions
+    for (const userRole of user.userRoles) {
+      for (const rolePerm of userRole.role.permissions) {
+        if (rolePerm.granted) {
+          const key = `${rolePerm.permission.code}_${userRole.scope}_${userRole.scopeId || 'all'}`;
+          permissions.set(key, {
+            ...rolePerm.permission,
+            scope: userRole.scope,
+            scopeId: userRole.scopeId,
+            fromRole: userRole.role.name
+          });
+        }
       }
     }
-  }
-  
-  // Apply user permission overrides
-  for (const userPerm of user.userPermissions) {
-    const key = `${userPerm.permission.code}_${userPerm.scope}_${userPerm.scopeId || 'all'}`;
-    if (userPerm.granted) {
-      permissions.set(key, {
-        ...userPerm.permission,
-        scope: userPerm.scope,
-        scopeId: userPerm.scopeId,
-        isOverride: true
-      });
-    } else {
-      permissions.delete(key);
+    
+    // Apply user permission overrides
+    for (const userPerm of user.userPermissions) {
+      const key = `${userPerm.permission.code}_${userPerm.scope}_${userPerm.scopeId || 'all'}`;
+      if (userPerm.granted) {
+        permissions.set(key, {
+          ...userPerm.permission,
+          scope: userPerm.scope,
+          scopeId: userPerm.scopeId,
+          isOverride: true
+        });
+      } else {
+        permissions.delete(key);
+      }
     }
+    
+    return c.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        roles: user.userRoles.map(ur => ({
+          id: ur.role.id,
+          name: ur.role.name,
+          level: ur.role.level,
+          scope: ur.scope,
+          scopeId: ur.scopeId
+        }))
+      },
+      permissions: Array.from(permissions.values())
+    });
+  } catch (error: any) {
+    console.error('Error fetching user permissions:', error);
+    if (error.code === 'P2021') {
+      return c.json({ 
+        error: 'RBAC tables not found. Please run /api/rbac-init/init first.',
+        needsInit: true 
+      }, 503);
+    }
+    return c.json({ error: 'Failed to fetch user permissions' }, 500);
   }
-  
-  return c.json({
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      roles: user.userRoles.map(ur => ({
-        id: ur.role.id,
-        name: ur.role.name,
-        level: ur.role.level,
-        scope: ur.scope,
-        scopeId: ur.scopeId
-      }))
-    },
-    permissions: Array.from(permissions.values())
-  });
 });
 
 // Assign role to user

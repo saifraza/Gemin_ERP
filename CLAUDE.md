@@ -182,6 +182,40 @@ When code changes are made, run these commands to ensure quality:
 - `npm test` - Run tests
 - `npm run build` - Ensure build passes
 
+## RBAC Setup (Important for Production)
+If you encounter 500 errors on RBAC endpoints, the RBAC tables need to be initialized:
+
+### Option 1: Using the init script (recommended)
+```bash
+# Set the API URL (use your Railway URL if in production)
+export CORE_API_URL=https://your-core-api.railway.app
+
+# Run the init script
+node scripts/init-rbac.js
+```
+
+### Option 2: Manual initialization
+1. Call the init endpoint:
+```bash
+curl -X POST https://your-core-api.railway.app/api/rbac-init/init
+```
+
+2. Then seed the data:
+```bash
+curl -X POST https://your-core-api.railway.app/api/rbac-init/seed
+```
+
+3. Check status:
+```bash
+curl https://your-core-api.railway.app/api/rbac-init/status
+```
+
+The RBAC system includes:
+- **Roles**: Super Admin, Admin, Manager, User
+- **Modules**: Master Data, Supply Chain, Finance
+- **Permissions**: CRUD operations per module
+- **Scope-based access**: Global, Company, Factory, Division, Department
+
 ## Key Decisions Made
 1. **Removed Redis entirely** - Using PostgreSQL cache instead
 2. **No hardcoded ports or URLs** - Everything through environment variables
