@@ -2,7 +2,11 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// Only import devtools in development
+let ReactQueryDevtools: any = () => null;
+if (process.env.NODE_ENV === 'development') {
+  ReactQueryDevtools = require('@tanstack/react-query-devtools').ReactQueryDevtools;
+}
 import { Toaster } from 'sonner';
 
 interface ProvidersProps {

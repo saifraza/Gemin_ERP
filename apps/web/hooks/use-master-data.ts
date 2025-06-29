@@ -87,11 +87,11 @@ const fetchCompanies = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -123,11 +123,11 @@ const fetchUsers = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -159,11 +159,11 @@ const fetchFactories = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -221,26 +221,8 @@ export const useCreateCompany = () => {
         const error = await res.json();
         throw new Error(error.error || 'Failed to create company');
       }
-      const data = await res.json();
-  
-  // If API returns paginated format, return as-is
-  // Otherwise, convert to expected format
-  if (data.data && data.pagination) {
-    return data;
-  }
-  
-  // Legacy format - convert to paginated format
-  return {
-    data: Array.isArray(data) ? data : [],
-    pagination: {
-      page: params.page || 1,
-      limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
-      totalPages: 1,
-      hasMore: false,
-      nextPage: null,
-    }
-  };
+      const responseData = await res.json();
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
@@ -275,11 +257,11 @@ export const useDeleteCompany = () => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -311,21 +293,21 @@ export const useCreateUser = () => {
         const error = await res.json();
         throw new Error(error.error || 'Failed to create user');
       }
-      const data = await res.json();
+      const responseData = await res.json();
   
   // If API returns paginated format, return as-is
   // Otherwise, convert to expected format
-  if (data.data && data.pagination) {
-    return data;
+  if (responseData.data && responseData.pagination) {
+    return responseData;
   }
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -356,21 +338,21 @@ export const useCreateFactory = () => {
         const error = await res.json();
         throw new Error(error.error || 'Failed to create business unit');
       }
-      const data = await res.json();
+      const responseData = await res.json();
   
   // If API returns paginated format, return as-is
   // Otherwise, convert to expected format
-  if (data.data && data.pagination) {
-    return data;
+  if (responseData.data && responseData.pagination) {
+    return responseData;
   }
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(data) ? data : [],
+    data: Array.isArray(responseData) ? responseData : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(data) ? data.length : 0,
+      total: Array.isArray(responseData) ? responseData.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
