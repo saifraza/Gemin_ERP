@@ -205,34 +205,34 @@ export default function InventoryPage() {
   };
 
   const inventoryColumns = [
-    { key: 'sku', header: 'SKU' },
-    { key: 'name', header: 'Item Name', sortable: true },
-    { key: 'category', header: 'Category' },
+    { key: 'sku', label: 'SKU' },
+    { key: 'name', label: 'Item Name' },
+    { key: 'category', label: 'Category' },
     { 
       key: 'currentStock', 
-      header: 'Current Stock',
-      render: (value: number, row: any) => (
+      label: 'Current Stock',
+      render: (item: any) => (
         <div>
-          <span className="font-medium">{value.toLocaleString()}</span>
-          <span className="text-gray-500 ml-1">{row.unit}</span>
+          <span className="font-medium">{item.currentStock.toLocaleString()}</span>
+          <span className="text-gray-500 ml-1">{item.unit}</span>
         </div>
       )
     },
     { 
       key: 'reorderLevel', 
-      header: 'Reorder Level',
-      render: (value: number, row: any) => `${value} ${row.unit}`
+      label: 'Reorder Level',
+      render: (item: any) => `${item.reorderLevel} ${item.unit}`
     },
-    { key: 'location', header: 'Location' },
+    { key: 'location', label: 'Location' },
     { 
       key: 'value', 
-      header: 'Value',
-      render: (value: number) => `₹${(value / 1000000).toFixed(1)}M`
+      label: 'Value',
+      render: (item: any) => `₹${(item.value / 1000000).toFixed(1)}M`
     },
     { 
       key: 'status', 
-      header: 'Status',
-      render: (status: string) => getStockStatusBadge(status)
+      label: 'Status',
+      render: (item: any) => getStockStatusBadge(item.status)
     }
   ];
 
@@ -398,22 +398,22 @@ export default function InventoryPage() {
               <TabsContent value="transactions" className="mt-0">
                 <DataTable
                   columns={[
-                    { key: 'id', header: 'Transaction ID' },
+                    { key: 'id', label: 'Transaction ID' },
                     { 
                       key: 'type', 
-                      header: 'Type',
-                      render: (type: string) => getTransactionTypeBadge(type)
+                      label: 'Type',
+                      render: (item: any) => getTransactionTypeBadge(item.type)
                     },
-                    { key: 'item', header: 'Item' },
+                    { key: 'item', label: 'Item' },
                     { 
                       key: 'quantity', 
-                      header: 'Quantity',
-                      render: (value: number, row: any) => `${value} ${row.unit}`
+                      label: 'Quantity',
+                      render: (item: any) => `${item.quantity} ${item.unit}`
                     },
-                    { key: 'from', header: 'From' },
-                    { key: 'to', header: 'To' },
-                    { key: 'date', header: 'Date' },
-                    { key: 'user', header: 'User' }
+                    { key: 'from', label: 'From' },
+                    { key: 'to', label: 'To' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'user', label: 'User' }
                   ]}
                   data={recentTransactions}
                 />

@@ -169,24 +169,24 @@ export default function ProcurementPage() {
   };
 
   const purchaseOrderColumns = [
-    { key: 'id', header: 'PO Number', sortable: true },
-    { key: 'vendor', header: 'Vendor', sortable: true },
-    { key: 'items', header: 'Items' },
+    { key: 'id', label: 'PO Number' },
+    { key: 'vendor', label: 'Vendor' },
+    { key: 'items', label: 'Items' },
     { 
       key: 'value', 
-      header: 'Value',
-      render: (value: number) => `₹${value.toLocaleString()}`
+      label: 'Value',
+      render: (item: any) => `₹${item.value.toLocaleString()}`
     },
     { 
       key: 'status', 
-      header: 'Status',
-      render: (status: string) => getStatusBadge(status)
+      label: 'Status',
+      render: (item: any) => getStatusBadge(item.status)
     },
-    { key: 'requestedBy', header: 'Requested By' },
-    { key: 'requiredDate', header: 'Required Date' },
+    { key: 'requestedBy', label: 'Requested By' },
+    { key: 'requiredDate', label: 'Required Date' },
     {
       key: 'actions',
-      header: '',
+      label: '',
       render: () => (
         <Button variant="ghost" size="sm">
           <MoreHorizontal className="w-4 h-4" />
@@ -315,32 +315,32 @@ export default function ProcurementPage() {
               <TabsContent value="requisitions" className="mt-0">
                 <DataTable
                   columns={[
-                    { key: 'id', header: 'PR Number', sortable: true },
-                    { key: 'department', header: 'Department' },
-                    { key: 'items', header: 'Items' },
+                    { key: 'id', label: 'PR Number' },
+                    { key: 'department', label: 'Department' },
+                    { key: 'items', label: 'Items' },
                     { 
                       key: 'estimatedValue', 
-                      header: 'Est. Value',
-                      render: (value: number) => `₹${value.toLocaleString()}`
+                      label: 'Est. Value',
+                      render: (item: any) => `₹${item.estimatedValue.toLocaleString()}`
                     },
                     { 
                       key: 'priority', 
-                      header: 'Priority',
-                      render: (priority: string) => (
-                        <Badge variant={priority === 'high' ? 'destructive' : 'secondary'}>
-                          {priority.toUpperCase()}
+                      label: 'Priority',
+                      render: (item: any) => (
+                        <Badge variant={item.priority === 'high' ? 'destructive' : 'secondary'}>
+                          {item.priority.toUpperCase()}
                         </Badge>
                       )
                     },
                     { 
                       key: 'status', 
-                      header: 'Status',
-                      render: (status: string) => getStatusBadge(status)
+                      label: 'Status',
+                      render: (item: any) => getStatusBadge(item.status)
                     },
-                    { key: 'requestedBy', header: 'Requested By' },
+                    { key: 'requestedBy', label: 'Requested By' },
                     {
                       key: 'actions',
-                      header: '',
+                      label: '',
                       render: () => (
                         <Button variant="ghost" size="sm">
                           <MoreHorizontal className="w-4 h-4" />
@@ -355,38 +355,38 @@ export default function ProcurementPage() {
               <TabsContent value="vendors" className="mt-0">
                 <DataTable
                   columns={[
-                    { key: 'id', header: 'Vendor ID' },
-                    { key: 'name', header: 'Vendor Name', sortable: true },
-                    { key: 'category', header: 'Category' },
+                    { key: 'id', label: 'Vendor ID' },
+                    { key: 'name', label: 'Vendor Name' },
+                    { key: 'category', label: 'Category' },
                     { 
                       key: 'rating', 
-                      header: 'Rating',
-                      render: (rating: number) => (
+                      label: 'Rating',
+                      render: (item: any) => (
                         <div className="flex items-center">
                           <span className="mr-1">⭐</span>
-                          {rating}
+                          {item.rating}
                         </div>
                       )
                     },
-                    { key: 'totalOrders', header: 'Total Orders' },
+                    { key: 'totalOrders', label: 'Total Orders' },
                     { 
                       key: 'totalSpend', 
-                      header: 'Total Spend',
-                      render: (value: number) => `₹${(value / 1000000).toFixed(1)}M`
+                      label: 'Total Spend',
+                      render: (item: any) => `₹${(item.totalSpend / 1000000).toFixed(1)}M`
                     },
                     { 
                       key: 'status', 
-                      header: 'Status',
-                      render: (status: string) => (
-                        <Badge variant={status === 'active' ? 'default' : 'secondary'}>
-                          {status.toUpperCase()}
+                      label: 'Status',
+                      render: (item: any) => (
+                        <Badge variant={item.status === 'active' ? 'default' : 'secondary'}>
+                          {item.status.toUpperCase()}
                         </Badge>
                       )
                     },
-                    { key: 'paymentTerms', header: 'Payment Terms' },
+                    { key: 'paymentTerms', label: 'Payment Terms' },
                     {
                       key: 'actions',
-                      header: '',
+                      label: '',
                       render: () => (
                         <Button variant="ghost" size="sm">
                           <MoreHorizontal className="w-4 h-4" />
