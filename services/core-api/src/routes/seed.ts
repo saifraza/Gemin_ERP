@@ -235,4 +235,97 @@ seedRoutes.delete('/clear-all', async (c) => {
   }
 });
 
+// Seed RBAC data - only accessible by SUPER_ADMIN
+seedRoutes.post('/rbac', async (c) => {
+  try {
+    // Get token and verify user is SUPER_ADMIN
+    const token = c.req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return c.json({ error: 'No token provided' }, 401);
+    }
+
+    const payload = await verifyToken(token);
+    if (payload.role !== 'SUPER_ADMIN') {
+      return c.json({ error: 'Only SUPER_ADMIN can seed RBAC data' }, 403);
+    }
+
+    console.log('Starting RBAC seed...');
+    
+    // Create Modules
+    const modules = await Promise.all([
+      prisma.module.upsert({
+        where: { code: 'finance' },
+        update: {},
+        create: {
+          code: 'finance',
+          name: 'Financial Management',
+          description: 'Financial operations and accounting',
+          icon: 'DollarSign',
+          path: '/finance',
+          isActive: true
+        }
+      }),
+      prisma.module.upsert({
+        where: { code: 'supply-chain' },
+        update: {},
+        create: {
+          code: 'supply-chain',
+          name: 'Supply Chain Management',
+          description: 'Procurement, inventory, and logistics',
+          icon: 'Package',
+          path: '/supply-chain',
+          isActive: true
+        }
+      }),
+      prisma.module.upsert({
+        where: { code: 'master-data' },
+        update: {},
+        create: {
+          code: 'master-data',
+          name: 'Master Data',
+          description: 'Central data management',
+          icon: 'Database',
+          path: '/master-data',
+          isActive: true
+        }
+      })
+    ]);
+
+    // Create Role Definitions
+    const roles = await Promise.all([
+      prisma.roleDefinition.upsert({
+        where: { code: 'admin' },
+        update: {},
+        create: {
+          code: 'admin',
+          name: 'Company Admin',
+          description: 'Company-level administration',
+          level: 90,
+          isSystem: true
+        }
+      }),
+      prisma.roleDefinition.upsert({
+        where: { code: 'manager' },
+        update: {},
+        create: {
+          code: 'manager',
+          name: 'Manager',
+          description: 'Department management',
+          level: 70,
+          isSystem: false
+        }
+      })
+    ]);
+
+    return c.json({ 
+      message: 'RBAC data seeded successfully',
+      modules: modules.length,
+      roles: roles.length
+    });
+  } catch (error) {
+    console.error('Seed RBAC error:', error);
+    return c.json({ error: 'Failed to seed RBAC data', details: error.message }, 500);
+  }
+});
+
 export { seedRoutes };
