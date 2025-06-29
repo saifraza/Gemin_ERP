@@ -280,11 +280,11 @@ function MasterDataContent() {
     try {
       const validRows = bulkData.filter(row => {
         if (activeTab === 'companies') {
-          return row.name && row.code && row.email;
+          return row.name && row.email;
         } else if (activeTab === 'users') {
           return row.name && row.username && row.email && row.password && row.companyId;
         } else if (activeTab === 'factories') {
-          return row.name && row.code && row.type && row.companyId;
+          return row.name && row.type && row.companyId;
         }
         return false;
       });
@@ -297,10 +297,15 @@ function MasterDataContent() {
       let successCount = 0;
       let errorCount = 0;
 
-      for (const row of validRows) {
+      for (let i = 0; i < validRows.length; i++) {
+        const row = validRows[i];
         try {
+          // Generate unique code for each item
+          const codeType = activeTab === 'factories' ? 'business' : activeTab === 'companies' ? 'company' : 'user';
+          const code = await generateCode(codeType);
+          
           if (activeTab === 'companies') {
-            await createCompany.mutateAsync(row);
+            await createCompany.mutateAsync({ ...row, code });
           } else if (activeTab === 'users') {
             await createUser.mutateAsync(row);
           } else if (activeTab === 'factories') {
@@ -331,7 +336,7 @@ function MasterDataContent() {
             
             const factoryData = {
               name: row.name,
-              code: row.code,
+              code: code,
               type: factoryType,
               companyId: row.companyId,
               location: location,
@@ -373,11 +378,16 @@ function MasterDataContent() {
     try {
       if (activeTab === 'companies') {
         // Validate required fields
-        if (!createFormData.name || !createFormData.code) {
+        if (!createFormData.name) {
           toast.error('Please fill in all required fields');
           return;
         }
-        await createCompany.mutateAsync(createFormData);
+        // Generate code if not provided
+        let code = createFormData.code;
+        if (!code) {
+          code = await generateCode('company');
+        }
+        await createCompany.mutateAsync({ ...createFormData, code });
       } else if (activeTab === 'users') {
         // Validate required fields
         if (!createFormData.name || !createFormData.username || !createFormData.email || !createFormData.password) {
@@ -387,9 +397,15 @@ function MasterDataContent() {
         await createUser.mutateAsync(createFormData);
       } else if (activeTab === 'factories') {
         // Ensure required fields are provided
-        if (!createFormData.name || !createFormData.code || !createFormData.type || !createFormData.companyId) {
+        if (!createFormData.name || !createFormData.type || !createFormData.companyId) {
           toast.error('Please fill in all required fields');
           return;
+        }
+        
+        // Generate code if not provided
+        let code = createFormData.code;
+        if (!code) {
+          code = await generateCode('business');
         }
         
         // Map business type to factory type
@@ -441,7 +457,7 @@ function MasterDataContent() {
         
         const factoryData = {
           name: createFormData.name,
-          code: createFormData.code,
+          code: code,
           type: factoryType,
           companyId: createFormData.companyId,
           location: location,
@@ -451,14 +467,22 @@ function MasterDataContent() {
         await createFactory.mutateAsync(factoryData);
       } else if (activeTab === 'divisions') {
         // Ensure required fields are provided
-        if (!createFormData.name || !createFormData.code || !createFormData.type || !createFormData.factoryId) {
+        if (!createFormData.name || !createFormData.factoryId) {
           toast.error('Please fill in all required fields');
           return;
         }
         
+        // Generate code if not provided
+        let code = createFormData.code;
+        if (!code) {
+          // Use a custom code generation for divisions
+          const divPrefix = 'DIV';
+          const timestamp = Date.now().toString().slice(-4);
+          code = `${divPrefix}${timestamp}`;
+        }
+        
         // Map division code to appropriate type
         let divType = 'COMMON';
-        const code = createFormData.code;
         if (code.startsWith('MIL') || code.startsWith('S-MIL')) divType = 'SUGAR';
         else if (code.startsWith('BOI') || code.startsWith('S-BOI')) divType = 'SUGAR';
         else if (code.startsWith('PCK') || code.startsWith('S-PCK')) divType = 'SUGAR';
@@ -470,7 +494,7 @@ function MasterDataContent() {
         
         const divisionData = {
           name: createFormData.name,
-          code: createFormData.code,
+          code: code,
           type: divType,
           factoryId: createFormData.factoryId,
           isActive: createFormData.isActive !== false
@@ -1027,11 +1051,10 @@ function MasterDataContent() {
                 size="sm"
                 onClick={() => {
                   setCreateMode('bulk');
-                  // Initialize bulk data with empty rows
+                  // Initialize bulk data with empty rows (without code field)
                   if (bulkData.length === 0) {
-                    setBulkData(Array(5).fill(null).map(() => ({
+                    setBulkData(Array(3).fill(null).map(() => ({
                       name: '',
-                      code: '',
                       email: '',
                       ...(activeTab === 'users' && { username: '', password: '', role: 'OPERATOR' }),
                       ...(activeTab === 'factories' && { type: 'INTEGRATED', companyId: '', location: { city: '', state: '', address: '' } }),
@@ -1039,7 +1062,7 @@ function MasterDataContent() {
                   }
                 }}
               >
-                Bulk Import (Excel-like)
+                Bulk Import
               </Button>
             </div>
             
@@ -1061,13 +1084,13 @@ function MasterDataContent() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="code">Company Code</Label>
+                      <Label htmlFor="code">Company Code (Optional)</Label>
                       <div className="flex gap-2">
                         <Input
                           id="code"
                           value={createFormData.code || ''}
                           onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
-                          placeholder="Enter code or generate"
+                          placeholder="Leave empty to auto-generate"
                         />
                         <Button
                           type="button"
@@ -1228,13 +1251,13 @@ function MasterDataContent() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="code">Business Code</Label>
+                      <Label htmlFor="code">Business Code (Optional)</Label>
                       <div className="flex gap-2">
                         <Input
                           id="code"
                           value={createFormData.code || ''}
                           onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
-                          placeholder="Enter code or generate"
+                          placeholder="Leave empty to auto-generate"
                         />
                         <Button
                           type="button"
@@ -1445,12 +1468,12 @@ function MasterDataContent() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="divisionCode">Division Code</Label>
+                      <Label htmlFor="divisionCode">Division Code (Optional)</Label>
                       <Input
                         id="divisionCode"
                         value={createFormData.code || ''}
                         onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
-                        placeholder="Enter division code"
+                        placeholder="Leave empty to auto-generate"
                       />
                     </div>
                   </div>
@@ -1536,7 +1559,6 @@ function MasterDataContent() {
                           <tr>
                             <th className="px-2 py-2 text-left font-medium">#</th>
                             <th className="px-2 py-2 text-left font-medium">Company Name*</th>
-                            <th className="px-2 py-2 text-left font-medium">Code*</th>
                             <th className="px-2 py-2 text-left font-medium">Email*</th>
                             <th className="px-2 py-2 text-left font-medium">Phone</th>
                             <th className="px-2 py-2 text-left font-medium">GST Number</th>
@@ -1558,32 +1580,6 @@ function MasterDataContent() {
                                   placeholder="Company name"
                                   className="h-8"
                                 />
-                              </td>
-                              <td className="px-2 py-1">
-                                <div className="flex gap-1">
-                                  <Input
-                                    value={row.code || ''}
-                                    onChange={(e) => {
-                                      const newData = [...bulkData];
-                                      newData[index] = { ...newData[index], code: e.target.value };
-                                      setBulkData(newData);
-                                    }}
-                                    placeholder="Code"
-                                    className="h-8"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={async () => {
-                                      const code = await generateCode('company');
-                                      const newData = [...bulkData];
-                                      newData[index] = { ...newData[index], code };
-                                      setBulkData(newData);
-                                    }}
-                                  >
-                                    <RefreshCw className="w-3 h-3" />
-                                  </Button>
-                                </div>
                               </td>
                               <td className="px-2 py-1">
                                 <Input
@@ -1643,7 +1639,7 @@ function MasterDataContent() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setBulkData([...bulkData, { name: '', code: '', email: '' }]);
+                            setBulkData([...bulkData, { name: '', email: '' }]);
                           }}
                         >
                           <Plus className="w-4 h-4 mr-2" />
@@ -1801,7 +1797,6 @@ function MasterDataContent() {
                           <tr>
                             <th className="px-2 py-2 text-left font-medium">#</th>
                             <th className="px-2 py-2 text-left font-medium">Business Unit Name*</th>
-                            <th className="px-2 py-2 text-left font-medium">Code*</th>
                             <th className="px-2 py-2 text-left font-medium">Type*</th>
                             <th className="px-2 py-2 text-left font-medium">Company*</th>
                             <th className="px-2 py-2 text-left font-medium">City</th>
@@ -1824,32 +1819,6 @@ function MasterDataContent() {
                                   placeholder="Business unit name"
                                   className="h-8"
                                 />
-                              </td>
-                              <td className="px-2 py-1">
-                                <div className="flex gap-1">
-                                  <Input
-                                    value={row.code || ''}
-                                    onChange={(e) => {
-                                      const newData = [...bulkData];
-                                      newData[index] = { ...newData[index], code: e.target.value };
-                                      setBulkData(newData);
-                                    }}
-                                    placeholder="Code"
-                                    className="h-8"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={async () => {
-                                      const code = await generateCode('business');
-                                      const newData = [...bulkData];
-                                      newData[index] = { ...newData[index], code };
-                                      setBulkData(newData);
-                                    }}
-                                  >
-                                    <RefreshCw className="w-3 h-3" />
-                                  </Button>
-                                </div>
                               </td>
                               <td className="px-2 py-1">
                                 <Select
@@ -1955,7 +1924,6 @@ function MasterDataContent() {
                           onClick={() => {
                             setBulkData([...bulkData, { 
                               name: '', 
-                              code: '', 
                               type: 'INTEGRATED', 
                               companyId: '',
                               location: { city: '', state: '', address: '' }
