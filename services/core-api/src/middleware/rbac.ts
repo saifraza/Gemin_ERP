@@ -21,6 +21,27 @@ export const requirePermission = (options: PermissionCheckOptions) => {
       // Get user with all active roles and permissions
       const user = await prisma.user.findUnique({
         where: { id: userId },
+        select: {
+          id: true,
+          role: true,
+          userRoles: true,
+          userPermissions: true
+        }
+      });
+
+      if (!user) {
+        return c.json({ error: 'User not found' }, 404);
+      }
+
+      // SUPER_ADMIN bypasses all permission checks
+      if (user.role === 'SUPER_ADMIN') {
+        await next();
+        return;
+      }
+
+      // For non-SUPER_ADMIN users, check permissions
+      const userWithPermissions = await prisma.user.findUnique({
+        where: { id: userId },
         include: {
           userRoles: {
             where: {
@@ -59,15 +80,11 @@ export const requirePermission = (options: PermissionCheckOptions) => {
         }
       });
 
-      if (!user) {
-        return c.json({ error: 'User not found' }, 404);
-      }
-
       // Check if user has required permission
       let hasPermission = false;
 
       // Check role permissions
-      for (const userRole of user.userRoles) {
+      for (const userRole of userWithPermissions.userRoles) {
         // Check scope hierarchy
         if (options.scope && scopeId) {
           // Skip if role scope doesn't match
@@ -90,7 +107,7 @@ export const requirePermission = (options: PermissionCheckOptions) => {
       }
 
       // Check user permission overrides
-      const userPermission = user.userPermissions.find(up => {
+      const userPermission = userWithPermissions.userPermissions.find(up => {
         if (up.permission.code !== options.permission) return false;
         
         // Check scope
@@ -120,13 +137,13 @@ export const requirePermission = (options: PermissionCheckOptions) => {
       // Store user permissions in context for use in route handlers
       c.set('userPermissions', {
         userId,
-        permissions: [...user.userRoles.flatMap(ur => 
+        permissions: [...userWithPermissions.userRoles.flatMap(ur => 
           ur.role.permissions.map(rp => ({
             code: rp.permission.code,
             scope: ur.scope,
             scopeId: ur.scopeId
           }))
-        ), ...user.userPermissions.map(up => ({
+        ), ...userWithPermissions.userPermissions.map(up => ({
           code: up.permission.code,
           scope: up.scope,
           scopeId: up.scopeId,
