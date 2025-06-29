@@ -9,6 +9,7 @@ import pino from 'pino';
 import { jwtVerify } from 'jose';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSQLCache, PostgreSQLRateLimiter } from './shared/cache/index.js';
+import { securityHeaders } from './middleware/security.js';
 import type { 
   AppContext, 
   AppMiddleware, 
@@ -113,6 +114,7 @@ const corsOptions = {
 // Middleware
 app.use('*', cors(corsOptions));
 app.use('*', logger());
+app.use('*', securityHeaders());
 
 // Rate limiting middleware
 const rateLimiterMiddleware = async (c: any, next: any) => {

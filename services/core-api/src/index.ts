@@ -7,6 +7,8 @@ import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
 import { PostgreSQLCache } from './shared/cache/index';
 import { errorHandler } from './shared/errors/index';
+import { securityHeaders } from './middleware/security';
+import { performanceMonitoring, startMemoryMonitoring } from './middleware/performance';
 
 // Routes
 import { authRoutes } from './routes/auth';
@@ -38,6 +40,8 @@ app.use('*', cors({
   credentials: true,
 }));
 app.use('*', logger());
+app.use('*', securityHeaders());
+app.use('*', performanceMonitoring({ slowRequestThreshold: 500 }));
 
 // Root endpoint
 app.get('/', (c) => {
@@ -167,6 +171,11 @@ serve({
   
   // Cache is ready immediately with PostgreSQL
   log.info('PostgreSQL cache initialized and ready');
+  
+  // Start memory monitoring in production
+  if (process.env.NODE_ENV === 'production') {
+    startMemoryMonitoring(300000); // Every 5 minutes
+  }
 });
 
 // Graceful shutdown

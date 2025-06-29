@@ -20,6 +20,64 @@ const IndentStatus = PrismaClient.IndentStatus || {
   CANCELLED: 'CANCELLED'
 };
 
+// Optimized select objects to prevent N+1 queries
+const indentSelect = {
+  id: true,
+  indentNumber: true,
+  factoryId: true,
+  materialType: true,
+  materials: true,
+  priority: true,
+  requiredDate: true,
+  description: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  factory: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  requestedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  approvedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+} as const;
+
+const indentWithRfqSelect = {
+  ...indentSelect,
+  rfqs: {
+    select: {
+      id: true,
+      rfqNumber: true,
+      status: true,
+      quotations: {
+        select: {
+          id: true,
+          totalAmount: true,
+          vendor: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 const indents = new Hono();
 
 // Apply auth middleware to all routes
@@ -148,20 +206,7 @@ indents.get(
         id,
         companyId: user.companyId,
       },
-      include: {
-        factory: true,
-        requestedBy: true,
-        approvedBy: true,
-        rfqs: {
-          include: {
-            quotations: {
-              include: {
-                vendor: true,
-              },
-            },
-          },
-        },
-      },
+      select: indentWithRfqSelect,
     });
     
     if (!indent) {
@@ -192,10 +237,7 @@ indents.post(
         requestedById: user.id,
         requiredDate: new Date(validated.requiredDate),
       },
-      include: {
-        factory: true,
-        requestedBy: true,
-      },
+      select: indentSelect,
     });
     
     // Create activity log
