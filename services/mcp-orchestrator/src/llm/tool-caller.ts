@@ -1,7 +1,6 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { factoryTools } from '../tools/factory-tools.js';
-import { procurementTools } from '../tools/procurement-tools.js';
 import { analyticsTools } from '../tools/analytics-tools.js';
 import { erpHelpTools } from '../tools/erp-help-tools.js';
 import pino from 'pino';
@@ -26,7 +25,7 @@ export class ToolCaller {
     
     // Register all tools
     this.tools = new Map();
-    const allTools = [...factoryTools, ...procurementTools, ...analyticsTools, ...erpHelpTools];
+    const allTools = [...factoryTools, ...analyticsTools, ...erpHelpTools];
     allTools.forEach(tool => {
       this.tools.set(tool.name, tool);
     });
