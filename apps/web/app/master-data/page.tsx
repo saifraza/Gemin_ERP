@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useCallback, memo, useRef } from 'react';
+import { Suspense, useState, useCallback, memo, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -15,7 +15,9 @@ import {
   Building2,
   Users,
   Factory,
-  BarChart3
+  BarChart3,
+  Network,
+  Shield
 } from 'lucide-react';
 import {
   useCompanies,
@@ -71,6 +73,14 @@ function MasterDataContent() {
   const [activeTab, setActiveTab] = useState<string>(tabFromUrl || 'companies');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Update activeTab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Update URL when tab changes
   const handleTabChange = useCallback((tab: string) => {
@@ -300,6 +310,18 @@ function MasterDataContent() {
             label="Business Units"
             count={(factoriesData?.pages?.[0] as any)?.pagination?.total}
           />
+          <TabButton
+            isActive={activeTab === 'divisions'}
+            onClick={() => handleTabChange('divisions')}
+            icon={<Network className="w-4 h-4" />}
+            label="Divisions"
+          />
+          <TabButton
+            isActive={activeTab === 'access'}
+            onClick={() => handleTabChange('access')}
+            icon={<Shield className="w-4 h-4" />}
+            label="Access Control"
+          />
         </div>
 
         {/* Actions Bar */}
@@ -340,7 +362,7 @@ function MasterDataContent() {
             </Button>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : 'Business'}
+              Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business' : 'New'}
             </Button>
           </div>
         </div>
@@ -401,6 +423,24 @@ function MasterDataContent() {
                   hasMore={hasMoreFactories}
                 />
               )}
+            </div>
+          )}
+          
+          {activeTab === 'divisions' && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="text-gray-500 mb-2">Divisions Management</div>
+                <p className="text-sm text-gray-400">Coming soon</p>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'access' && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="text-gray-500 mb-2">Access Control</div>
+                <p className="text-sm text-gray-400">Coming soon</p>
+              </div>
             </div>
           )}
         </Card>
