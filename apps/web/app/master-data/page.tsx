@@ -730,25 +730,29 @@ function MasterDataContent() {
       label: 'Total Companies', 
       value: (companiesData?.pages?.[0] as any)?.pagination?.total || 0,
       icon: <Building2 className="w-5 h-5" />,
-      color: 'text-blue-600'
+      color: 'text-blue-600',
+      href: null
     },
     { 
       label: 'Total Users', 
       value: (usersData?.pages?.[0] as any)?.pagination?.total || 0,
       icon: <Users className="w-5 h-5" />,
-      color: 'text-green-600'
+      color: 'text-green-600',
+      href: null
     },
     { 
       label: 'Business Units', 
       value: (factoriesData?.pages?.[0] as any)?.pagination?.total || 0,
       icon: <Factory className="w-5 h-5" />,
-      color: 'text-purple-600'
+      color: 'text-purple-600',
+      href: null
     },
     { 
-      label: 'Data Quality', 
-      value: '98%',
-      icon: <BarChart3 className="w-5 h-5" />,
-      color: 'text-orange-600'
+      label: 'Materials Master', 
+      value: 'Manage',
+      icon: <Package className="w-5 h-5" />,
+      color: 'text-orange-600',
+      href: '/master-data/materials'
     },
   ];
 
@@ -781,15 +785,29 @@ function MasterDataContent() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {stats.map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">{stat.label}</p>
-                  <p className="text-2xl font-bold mt-1">{stat.value}</p>
+            stat.href ? (
+              <a key={stat.label} href={stat.href}>
+                <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">{stat.label}</p>
+                      <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                    </div>
+                    <div className={`${stat.color}`}>{stat.icon}</div>
+                  </div>
+                </Card>
+              </a>
+            ) : (
+              <Card key={stat.label} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">{stat.label}</p>
+                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                  </div>
+                  <div className={`${stat.color}`}>{stat.icon}</div>
                 </div>
-                <div className={`${stat.color}`}>{stat.icon}</div>
-              </div>
-            </Card>
+              </Card>
+            )
           ))}
         </div>
 
