@@ -15,6 +15,12 @@ const modules = [
   { id: 'hr', name: 'Human Resources', icon: '👥' },
   { id: 'procurement', name: 'Procurement', icon: '🛒' },
   { id: 'production', name: 'Production', icon: '🏭' },
+  { id: 'inventory', name: 'Inventory Management', icon: '📊' },
+  { id: 'quality', name: 'Quality Management', icon: '✅' },
+  { id: 'maintenance', name: 'Maintenance', icon: '🔧' },
+  { id: 'crm', name: 'Customer Relations', icon: '🤝' },
+  { id: 'analytics', name: 'Analytics & BI', icon: '📈' },
+  { id: 'assets', name: 'Asset Management', icon: '🏢' },
 ];
 
 const tabs = [
@@ -42,18 +48,23 @@ export function NavBar({ activeTab = 'Dashboard', onTabChange }: NavBarProps) {
         </div>
         
         {showModuleSelector && (
-          <div className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg py-1 min-w-[200px] z-50 border border-gray-200">
+          <div className="absolute top-full left-0 mt-1 bg-white rounded shadow-lg py-2 min-w-[250px] max-h-[400px] overflow-y-auto z-50 border border-gray-200">
+            <div className="px-4 py-2 text-xs text-gray-500 uppercase tracking-wider font-semibold">
+              Select Module
+            </div>
             {modules.map((module) => (
               <div
                 key={module.id}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-gray-700"
+                className={`px-4 py-2.5 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 transition-colors ${
+                  selectedModule.id === module.id ? 'bg-blue-50 text-blue-700' : ''
+                }`}
                 onClick={() => {
                   setSelectedModule(module);
                   setShowModuleSelector(false);
                 }}
               >
-                <span>{module.icon}</span>
-                <span className="text-sm">{module.name}</span>
+                <span className="text-lg">{module.icon}</span>
+                <span className="text-sm font-medium">{module.name}</span>
               </div>
             ))}
           </div>

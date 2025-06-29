@@ -1,7 +1,29 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { 
+  ChevronRight, 
+  ChevronDown,
+  LayoutDashboard,
+  Database,
+  DollarSign,
+  Package,
+  Factory,
+  Users,
+  UserCheck,
+  FolderOpen,
+  BarChart3,
+  Shield,
+  Wrench,
+  FlaskConical,
+  ShoppingCart,
+  Briefcase,
+  ClipboardList,
+  Settings,
+  Network,
+  Lock,
+  UserCog
+} from 'lucide-react';
 import { useState } from 'react';
 
 interface SidebarItem {
@@ -11,11 +33,13 @@ interface SidebarItem {
   active?: boolean;
   href?: string;
   items?: SidebarItem[];
+  icon?: React.ReactNode;
 }
 
 interface SidebarSection {
   title: string;
   items: SidebarItem[];
+  icon?: React.ReactNode;
 }
 
 interface SidebarProps {
@@ -28,12 +52,49 @@ const defaultSections: SidebarSection[] = [
   {
     title: 'Main',
     items: [
-      { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
-      { id: 'master-data', label: 'Master Data', href: '/master-data' },
+      { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={18} /> },
+      { id: 'master-data', label: 'Master Data', href: '/master-data', icon: <Database size={18} /> },
     ]
   },
   {
-    title: 'Financial Management',
+    title: 'Operations',
+    icon: <Package size={16} />,
+    items: [
+      { 
+        id: 'sales-distribution', 
+        label: 'Sales & Distribution',
+        icon: <Briefcase size={18} />,
+        items: [
+          { id: 'sales-orders', label: 'Sales Orders', href: '/operations/sales/orders' },
+          { id: 'customers', label: 'Customers', href: '/operations/sales/customers' },
+          { id: 'distribution', label: 'Distribution', href: '/operations/sales/distribution' },
+        ]
+      },
+      { 
+        id: 'production', 
+        label: 'Production',
+        icon: <Factory size={18} />,
+        items: [
+          { id: 'production-planning', label: 'Production Planning', href: '/operations/production/planning' },
+          { id: 'shop-floor', label: 'Shop Floor', href: '/operations/production/shop-floor' },
+          { id: 'quality-control', label: 'Quality Control', href: '/operations/production/quality' },
+        ]
+      },
+      { 
+        id: 'procurement', 
+        label: 'Procurement',
+        icon: <ShoppingCart size={18} />,
+        items: [
+          { id: 'purchase-orders', label: 'Purchase Orders', href: '/operations/procurement/orders' },
+          { id: 'suppliers', label: 'Suppliers', href: '/operations/procurement/suppliers' },
+          { id: 'rfq', label: 'RFQ Management', href: '/operations/procurement/rfq' },
+        ]
+      },
+    ]
+  },
+  {
+    title: 'Finance Module',
+    icon: <DollarSign size={16} />,
     items: [
       { 
         id: 'general-ledger', 
@@ -71,17 +132,23 @@ const defaultSections: SidebarSection[] = [
     ]
   },
   {
-    title: 'Supply Chain',
+    title: 'Human Resources',
+    icon: <Users size={16} />,
     items: [
-      { 
-        id: 'procurement', 
-        label: 'Procurement',
-        items: [
-          { id: 'purchase-requisitions', label: 'Purchase Requisitions', href: '/scm/procurement/requisitions' },
-          { id: 'purchase-orders', label: 'Purchase Orders', href: '/scm/procurement/orders' },
-          { id: 'supplier-management', label: 'Supplier Management', href: '/scm/procurement/suppliers' },
-        ]
-      },
+      { id: 'core-hr', label: 'Core HR', href: '/hr/core', icon: <UserCheck size={18} /> },
+      { id: 'payroll', label: 'Payroll Processing', href: '/hr/payroll' },
+      { id: 'time-attendance', label: 'Time & Attendance', href: '/hr/time' },
+      { id: 'talent-management', label: 'Talent Management', href: '/hr/talent' },
+      { id: 'benefits', label: 'Benefits Administration', href: '/hr/benefits' },
+      { id: 'compensation', label: 'Compensation', href: '/hr/compensation' },
+      { id: 'employee-self-service', label: 'Employee Self-Service', href: '/hr/ess' },
+      { id: 'hr-analytics', label: 'HR Analytics', href: '/hr/analytics' },
+    ]
+  },
+  {
+    title: 'Supply Chain',
+    icon: <Package size={16} />,
+    items: [
       { 
         id: 'inventory', 
         label: 'Inventory Management',
@@ -99,6 +166,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Manufacturing',
+    icon: <Factory size={16} />,
     items: [
       { id: 'production-planning', label: 'Production Planning', href: '/manufacturing/planning' },
       { id: 'mes', label: 'Manufacturing Execution', href: '/manufacturing/mes' },
@@ -110,20 +178,8 @@ const defaultSections: SidebarSection[] = [
     ]
   },
   {
-    title: 'Human Resources',
-    items: [
-      { id: 'core-hr', label: 'Core HR', href: '/hr/core' },
-      { id: 'payroll', label: 'Payroll Processing', href: '/hr/payroll' },
-      { id: 'time-attendance', label: 'Time & Attendance', href: '/hr/time' },
-      { id: 'talent-management', label: 'Talent Management', href: '/hr/talent' },
-      { id: 'benefits', label: 'Benefits Administration', href: '/hr/benefits' },
-      { id: 'compensation', label: 'Compensation', href: '/hr/compensation' },
-      { id: 'employee-self-service', label: 'Employee Self-Service', href: '/hr/ess' },
-      { id: 'hr-analytics', label: 'HR Analytics', href: '/hr/analytics' },
-    ]
-  },
-  {
     title: 'CRM',
+    icon: <UserCheck size={16} />,
     items: [
       { id: 'sales-automation', label: 'Sales Force Automation', href: '/crm/sales' },
       { id: 'marketing', label: 'Marketing Automation', href: '/crm/marketing' },
@@ -134,6 +190,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Project Management',
+    icon: <FolderOpen size={16} />,
     items: [
       { id: 'project-planning', label: 'Project Planning', href: '/projects/planning' },
       { id: 'resource-management', label: 'Resource Management', href: '/projects/resources' },
@@ -144,6 +201,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Asset Management',
+    icon: <Wrench size={16} />,
     items: [
       { id: 'asset-tracking', label: 'Asset Tracking', href: '/assets/tracking' },
       { id: 'maintenance', label: 'Maintenance Management', href: '/assets/maintenance' },
@@ -154,6 +212,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Quality Management',
+    icon: <ClipboardList size={16} />,
     items: [
       { id: 'quality-planning', label: 'Quality Planning', href: '/quality/planning' },
       { id: 'quality-control', label: 'Quality Control', href: '/quality/control' },
@@ -165,6 +224,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Analytics & BI',
+    icon: <BarChart3 size={16} />,
     items: [
       { id: 'data-warehouse', label: 'Data Warehouse', href: '/analytics/warehouse' },
       { id: 'advanced-analytics', label: 'Advanced Analytics', href: '/analytics/advanced' },
@@ -175,6 +235,7 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'Specialized Modules',
+    icon: <Shield size={16} />,
     items: [
       { id: 'compliance-risk', label: 'Compliance & Risk', href: '/specialized/compliance' },
       { id: 'document-mgmt', label: 'Document Management', href: '/specialized/documents' },
@@ -187,12 +248,13 @@ const defaultSections: SidebarSection[] = [
   },
   {
     title: 'System',
+    icon: <Settings size={16} />,
     items: [
-      { id: 'system-test', label: 'System Test', href: '/system-test' },
-      { id: 'integration', label: 'Integration Platform', href: '/system/integration' },
+      { id: 'system-test', label: 'System Test', href: '/system-test', icon: <FlaskConical size={18} /> },
+      { id: 'integration', label: 'Integration Platform', href: '/system/integration', icon: <Network size={18} /> },
       { id: 'workflow', label: 'Workflow Management', href: '/system/workflow' },
-      { id: 'security', label: 'Security Management', href: '/system/security' },
-      { id: 'admin', label: 'System Administration', href: '/system/admin' },
+      { id: 'security', label: 'Security Management', href: '/system/security', icon: <Lock size={18} /> },
+      { id: 'admin', label: 'System Administration', href: '/system/admin', icon: <UserCog size={18} /> },
     ]
   }
 ];
@@ -200,7 +262,7 @@ const defaultSections: SidebarSection[] = [
 export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Main']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Main', 'System']));
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   
   const toggleSection = (sectionTitle: string) => {
@@ -243,7 +305,10 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps)
           }}
         >
           <div className="flex items-center justify-between flex-1">
-            <span className={depth > 0 ? 'text-sm' : ''}>{item.label}</span>
+            <div className="flex items-center gap-2">
+              {item.icon && <span className="text-gray-500">{item.icon}</span>}
+              <span className={depth > 0 ? 'text-sm' : ''}>{item.label}</span>
+            </div>
             <div className="flex items-center gap-2">
               {item.badge && (
                 <span className="sidebar-badge">{item.badge}</span>
@@ -276,7 +341,10 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick }: SidebarProps)
               className="sidebar-title cursor-pointer flex items-center justify-between"
               onClick={() => toggleSection(section.title)}
             >
-              <span>{section.title}</span>
+              <div className="flex items-center gap-2">
+                {section.icon && <span className="text-gray-500">{section.icon}</span>}
+                <span>{section.title}</span>
+              </div>
               <span className="text-gray-400">
                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </span>
