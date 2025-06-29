@@ -146,7 +146,19 @@ app.all('/api/*', async (req, res) => {
   
   // Determine which service to forward to
   let serviceUrl = services.core;
-  if (path.startsWith('/api/mcp')) {
+  let forwardPath = path;
+  
+  // Special handling for service health checks
+  if (path === '/api/core/health') {
+    serviceUrl = services.core;
+    forwardPath = '/health';
+  } else if (path === '/api/mcp/health') {
+    serviceUrl = services.mcp;
+    forwardPath = '/health';
+  } else if (path === '/api/event-processor/health') {
+    serviceUrl = services.eventProcessor;
+    forwardPath = '/health';
+  } else if (path.startsWith('/api/mcp')) {
     serviceUrl = services.mcp;
   }
   
@@ -157,7 +169,7 @@ app.all('/api/*', async (req, res) => {
     });
   }
   
-  const targetUrl = `${serviceUrl}${path}`;
+  const targetUrl = `${serviceUrl}${forwardPath}`;
   console.log(`Forwarding to: ${targetUrl}`);
   
   try {
