@@ -110,9 +110,9 @@ export default function OptimizedMasterDataPage() {
   } = useFactories({ search: debouncedSearch });
 
   // Flatten paginated data
-  const companies = companiesData?.pages.flatMap(page => page.data) || [];
-  const users = usersData?.pages.flatMap(page => page.data) || [];
-  const factories = factoriesData?.pages.flatMap(page => page.data) || [];
+  const companies = companiesData?.pages.flatMap((page: any) => page.data) || [];
+  const users = usersData?.pages.flatMap((page: any) => page.data) || [];
+  const factories = factoriesData?.pages.flatMap((page: any) => page.data) || [];
 
   // Mutations
   const createCompany = useCreateCompany();
@@ -222,19 +222,19 @@ export default function OptimizedMasterDataPage() {
   const stats = [
     { 
       label: 'Total Companies', 
-      value: companiesData?.pages[0]?.total || 0,
+      value: companiesData?.pages?.[0]?.pagination?.total || 0,
       icon: <Building2 className="w-5 h-5" />,
       color: 'text-blue-600'
     },
     { 
       label: 'Total Users', 
-      value: usersData?.pages[0]?.total || 0,
+      value: usersData?.pages?.[0]?.pagination?.total || 0,
       icon: <Users className="w-5 h-5" />,
       color: 'text-green-600'
     },
     { 
       label: 'Business Units', 
-      value: factoriesData?.pages[0]?.total || 0,
+      value: factoriesData?.pages?.[0]?.pagination?.total || 0,
       icon: <Factory className="w-5 h-5" />,
       color: 'text-purple-600'
     },
@@ -277,21 +277,21 @@ export default function OptimizedMasterDataPage() {
             onClick={() => setActiveTab('companies')}
             icon={<Building2 className="w-4 h-4" />}
             label="Companies"
-            count={companiesData?.pages[0]?.total}
+            count={companiesData?.pages?.[0]?.pagination?.total}
           />
           <TabButton
             isActive={activeTab === 'users'}
             onClick={() => setActiveTab('users')}
             icon={<Users className="w-4 h-4" />}
             label="Users"
-            count={usersData?.pages[0]?.total}
+            count={usersData?.pages?.[0]?.pagination?.total}
           />
           <TabButton
             isActive={activeTab === 'factories'}
             onClick={() => setActiveTab('factories')}
             icon={<Factory className="w-4 h-4" />}
             label="Business Units"
-            count={factoriesData?.pages[0]?.total}
+            count={factoriesData?.pages?.[0]?.pagination?.total}
           />
         </div>
 
