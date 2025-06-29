@@ -18,7 +18,8 @@ import {
   XCircle,
   AlertTriangle,
   FileText,
-  Upload
+  Upload,
+  Clock
 } from 'lucide-react';
 
 export default function QualityInspection() {

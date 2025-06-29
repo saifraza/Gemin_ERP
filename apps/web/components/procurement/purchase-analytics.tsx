@@ -15,7 +15,8 @@ import {
   Users,
   Calendar,
   Download,
-  Filter
+  Filter,
+  CheckCircle
 } from 'lucide-react';
 
 export default function PurchaseAnalytics() {

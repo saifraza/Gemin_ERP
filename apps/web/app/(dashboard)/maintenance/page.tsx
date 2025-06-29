@@ -13,7 +13,6 @@ import {
   CheckCircle,
   Clock,
   Activity,
-  Tool,
   Settings
 } from 'lucide-react';
 import MaintenanceDashboard from '@/components/maintenance/maintenance-dashboard';
@@ -54,7 +53,7 @@ export default function MaintenancePage() {
                 <p className="text-2xl font-bold text-white">24</p>
                 <p className="text-yellow-500 text-sm mt-1">8 high priority</p>
               </div>
-              <Tool className="h-10 w-10 text-orange-500" />
+              <Wrench className="h-10 w-10 text-orange-500" />
             </div>
           </CardContent>
         </Card>
@@ -107,7 +106,7 @@ export default function MaintenancePage() {
             Dashboard
           </TabsTrigger>
           <TabsTrigger value="work-orders" className="flex items-center gap-2">
-            <Tool className="h-4 w-4" />
+            <Wrench className="h-4 w-4" />
             Work Orders
           </TabsTrigger>
           <TabsTrigger value="preventive" className="flex items-center gap-2">
