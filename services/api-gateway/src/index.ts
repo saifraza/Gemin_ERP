@@ -36,11 +36,12 @@ async function ensureDbConnection() {
 }
 
 // Service URLs - Use Railway internal URLs when available
+// Railway uses port 8080 for all internal services
 const services = {
-  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal:3001' : 'http://localhost:3001'),
-  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal:3000' : 'http://localhost:3000'),
-  factory: process.env.FACTORY_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://factory-api.railway.internal:3002' : 'http://localhost:3002'),
-  analytics: process.env.ANALYTICS_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://analytics-api.railway.internal:3003' : 'http://localhost:3003'),
+  core: process.env.CORE_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal:8080' : 'http://localhost:3001'),
+  mcp: process.env.MCP_ORCHESTRATOR_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal:8080' : 'http://localhost:3000'),
+  factory: process.env.FACTORY_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://factory-api.railway.internal:8080' : 'http://localhost:3002'),
+  analytics: process.env.ANALYTICS_API_URL || (process.env.RAILWAY_ENVIRONMENT ? 'http://analytics-api.railway.internal:8080' : 'http://localhost:3003'),
 };
 
 // Log configuration for debugging
