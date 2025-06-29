@@ -422,17 +422,17 @@ rbacInitRoutes.post('/seed', async (c) => {
       );
     `);
 
-    const roleCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "RoleDefinition"`;
-    const moduleCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "Module"`;
-    const permissionCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "Permission"`;
+    const roleCount = await prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "RoleDefinition"`;
+    const moduleCount = await prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "Module"`;
+    const permissionCount = await prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "Permission"`;
 
     console.log('RBAC seed completed successfully');
 
     return c.json({ 
       message: 'RBAC data seeded successfully',
-      roles: roleCount[0]?.count || 0,
-      modules: moduleCount[0]?.count || 0,
-      permissions: permissionCount[0]?.count || 0
+      roles: Number(roleCount[0]?.count) || 0,
+      modules: Number(moduleCount[0]?.count) || 0,
+      permissions: Number(permissionCount[0]?.count) || 0
     });
   } catch (error) {
     console.error('RBAC seed error:', error);
@@ -447,9 +447,9 @@ rbacInitRoutes.post('/seed', async (c) => {
 rbacInitRoutes.get('/status', async (c) => {
   try {
     const [roleCount, moduleCount, permissionCount] = await Promise.all([
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM "RoleDefinition"`.catch(() => [{ count: 0 }]),
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM "Module"`.catch(() => [{ count: 0 }]),
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM "Permission"`.catch(() => [{ count: 0 }])
+      prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "RoleDefinition"`.catch(() => [{ count: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "Module"`.catch(() => [{ count: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*)::int as count FROM "Permission"`.catch(() => [{ count: 0 }])
     ]);
 
     return c.json({
