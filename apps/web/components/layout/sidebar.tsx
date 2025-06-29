@@ -153,18 +153,27 @@ const defaultSections: SidebarSection[] = [
     icon: <Package size={16} />,
     items: [
       { 
+        id: 'procurement', 
+        label: 'Procurement',
+        items: [
+          { id: 'purchase-orders', label: 'Purchase Orders', href: '/supply-chain/procurement' },
+          { id: 'requisitions', label: 'Requisitions', href: '/supply-chain/procurement#requisitions' },
+          { id: 'vendor-management', label: 'Vendor Management', href: '/supply-chain/procurement#vendors' },
+        ]
+      },
+      { 
         id: 'inventory', 
         label: 'Inventory Management',
         items: [
-          { id: 'item-master', label: 'Item Master', href: '/scm/inventory/items' },
-          { id: 'stock-control', label: 'Stock Control', href: '/scm/inventory/stock' },
-          { id: 'inventory-transactions', label: 'Transactions', href: '/scm/inventory/transactions' },
+          { id: 'stock-levels', label: 'Stock Levels', href: '/supply-chain/inventory' },
+          { id: 'item-master', label: 'Item Master', href: '/supply-chain/inventory#items' },
+          { id: 'transactions', label: 'Transactions', href: '/supply-chain/inventory#transactions' },
         ]
       },
-      { id: 'warehouse', label: 'Warehouse Management', href: '/scm/warehouse' },
-      { id: 'transportation', label: 'Transportation', href: '/scm/transportation' },
-      { id: 'demand-planning', label: 'Demand Planning', href: '/scm/demand-planning' },
-      { id: 'supply-planning', label: 'Supply Planning', href: '/scm/supply-planning' },
+      { id: 'warehouse', label: 'Warehouse Management', href: '/supply-chain/warehouse' },
+      { id: 'transportation', label: 'Transportation', href: '/supply-chain/transportation' },
+      { id: 'demand-planning', label: 'Demand Planning', href: '/supply-chain/demand-planning' },
+      { id: 'supply-planning', label: 'Supply Planning', href: '/supply-chain/supply-planning' },
     ]
   },
   {

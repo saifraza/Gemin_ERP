@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { FileText, Users, BarChart3, Package, Building2, FlaskConical } from 'lucide-react';
+import { FileText, Users, BarChart3, Package, Building2, FlaskConical, ShoppingCart, Truck } from 'lucide-react';
 
 interface QuickAction {
   id: string;
@@ -19,10 +19,10 @@ interface QuickActionsProps {
 const defaultActions: QuickAction[] = [
   { id: 'create-order', label: 'Create Order', icon: <FileText /> },
   { id: 'new-company', label: 'New Company', icon: <Building2 />, href: '/company/new' },
-  { id: 'new-customer', label: 'New Customer', icon: <Users /> },
+  { id: 'procurement', label: 'Procurement', icon: <ShoppingCart />, href: '/supply-chain/procurement' },
+  { id: 'inventory', label: 'Inventory', icon: <Package />, href: '/supply-chain/inventory' },
+  { id: 'transportation', label: 'Transportation', icon: <Truck />, href: '/supply-chain/transportation' },
   { id: 'generate-report', label: 'Generate Report', icon: <BarChart3 /> },
-  { id: 'test-backend', label: 'Test Backend', icon: <FlaskConical />, href: '/test' },
-  { id: 'inventory-check', label: 'Inventory Check', icon: <Package /> },
 ];
 
 export function QuickActions({ actions = defaultActions, onAction }: QuickActionsProps) {
