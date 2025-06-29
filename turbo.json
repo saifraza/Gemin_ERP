@@ -35,6 +35,9 @@
     },
     "clean": {
       "cache": false
+    },
+    "@modern-erp/core-api#build": {
+      "dependsOn": ["^build", "@modern-erp/database#generate"]
     }
   }
 }
