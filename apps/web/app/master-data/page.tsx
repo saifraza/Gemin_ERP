@@ -17,7 +17,9 @@ import {
   Factory,
   BarChart3,
   Network,
-  Shield
+  Shield,
+  FileSpreadsheet,
+  X
 } from 'lucide-react';
 import {
   useCompanies,
@@ -152,6 +154,8 @@ function MasterDataContent() {
     }
   });
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string | null>(null);
+  const [createMode, setCreateMode] = useState<'single' | 'bulk'>('single');
+  const [bulkData, setBulkData] = useState<any[]>([]);
 
   // Update activeTab when URL changes
   useEffect(() => {
@@ -220,8 +224,101 @@ function MasterDataContent() {
   // Division data
   const { data: divisions } = useDivisions(selectedBusinessUnit || undefined);
   
+  // Handle bulk create
+  const handleBulkCreate = async () => {
+    try {
+      const validRows = bulkData.filter(row => {
+        if (activeTab === 'companies') {
+          return row.name && row.code && row.email;
+        } else if (activeTab === 'users') {
+          return row.name && row.username && row.email && row.password && row.companyId;
+        } else if (activeTab === 'factories') {
+          return row.name && row.code && row.type && row.companyId;
+        }
+        return false;
+      });
+
+      if (validRows.length === 0) {
+        toast.error('Please fill in all required fields for at least one row');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of validRows) {
+        try {
+          if (activeTab === 'companies') {
+            await createCompany.mutateAsync(row);
+          } else if (activeTab === 'users') {
+            await createUser.mutateAsync(row);
+          } else if (activeTab === 'factories') {
+            // Process factory data same as single create
+            let factoryType = 'INTEGRATED';
+            switch (row.type) {
+              case 'Sugar Manufacturing':
+                factoryType = 'SUGAR_ONLY';
+                break;
+              case 'Integrated Sugar Complex':
+                factoryType = 'INTEGRATED';
+                break;
+              case 'Distillery':
+                factoryType = 'DISTILLERY';
+                break;
+              case 'Co-generation Plant':
+                factoryType = 'COGEN';
+                break;
+            }
+            
+            const location = {
+              address: row.location?.address || '',
+              city: row.location?.city || '',
+              state: row.location?.state || '',
+              country: 'India',
+              postalCode: ''
+            };
+            
+            const factoryData = {
+              name: row.name,
+              code: row.code,
+              type: factoryType,
+              companyId: row.companyId,
+              location: location,
+              capacity: { sugar: 0, ethanol: 0, power: 0, feed: 0 }
+            };
+            
+            await createFactory.mutateAsync(factoryData);
+          }
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error('Error creating row:', error);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully created ${successCount} ${activeTab}`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to create ${errorCount} ${activeTab}`);
+      }
+
+      if (successCount > 0) {
+        setShowCreateModal(false);
+        setBulkData([]);
+      }
+    } catch (error) {
+      console.error('Error in bulk create:', error);
+      toast.error('An error occurred during bulk creation');
+    }
+  };
+
   // Handle create
   const handleCreate = async () => {
+    if (createMode === 'bulk') {
+      return handleBulkCreate();
+    }
+
     try {
       if (activeTab === 'companies') {
         // Validate required fields
@@ -614,7 +711,29 @@ function MasterDataContent() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button onClick={() => setShowCreateModal(true)}>
+            {activeTab !== 'divisions' && activeTab !== 'access' && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCreateMode('bulk');
+                  setBulkData(Array(5).fill(null).map(() => ({
+                    name: '',
+                    code: '',
+                    email: '',
+                    ...(activeTab === 'users' && { username: '', password: '', role: 'OPERATOR' }),
+                    ...(activeTab === 'factories' && { type: 'INTEGRATED', companyId: '', location: { city: '', state: '', address: '' } }),
+                  })));
+                  setShowCreateModal(true);
+                }}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Bulk Import
+              </Button>
+            )}
+            <Button onClick={() => {
+              setCreateMode('single');
+              setShowCreateModal(true);
+            }}>
               <Plus className="w-4 h-4 mr-2" />
               Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business' : activeTab === 'divisions' ? 'Division' : 'New'}
             </Button>
@@ -787,7 +906,7 @@ function MasterDataContent() {
         
         {/* Create Modal */}
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className={createMode === 'bulk' ? "max-w-6xl" : "max-w-2xl"}>
             <DialogHeader>
               <DialogTitle>
                 Create New {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business Unit' : 'Division'}
@@ -797,7 +916,40 @@ function MasterDataContent() {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="grid gap-4 py-4">
+            {/* Mode Selection */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                variant={createMode === 'single' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCreateMode('single')}
+              >
+                Single Entry
+              </Button>
+              <Button
+                variant={createMode === 'bulk' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setCreateMode('bulk');
+                  // Initialize bulk data with empty rows
+                  if (bulkData.length === 0) {
+                    setBulkData(Array(5).fill(null).map(() => ({
+                      name: '',
+                      code: '',
+                      email: '',
+                      ...(activeTab === 'users' && { username: '', password: '', role: 'OPERATOR' }),
+                      ...(activeTab === 'factories' && { type: 'INTEGRATED', companyId: '', location: { city: '', state: '', address: '' } }),
+                    })));
+                  }
+                }}
+              >
+                Bulk Import (Excel-like)
+              </Button>
+            </div>
+            
+            <div className={createMode === 'single' ? "grid gap-4 py-4" : "overflow-auto max-h-[500px]"}>
+              {/* Single Entry Forms */}
+              {createMode === 'single' ? (
+                <>
               {/* Company Form */}
               {activeTab === 'companies' && (
                 <>
@@ -1270,6 +1422,451 @@ function MasterDataContent() {
                   </div>
                 </>
               )}
+                </>
+              ) : (
+                /* Bulk Entry Forms */
+                <div className="w-full">
+                  {activeTab === 'companies' && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-2 py-2 text-left font-medium">#</th>
+                            <th className="px-2 py-2 text-left font-medium">Company Name*</th>
+                            <th className="px-2 py-2 text-left font-medium">Code*</th>
+                            <th className="px-2 py-2 text-left font-medium">Email*</th>
+                            <th className="px-2 py-2 text-left font-medium">Phone</th>
+                            <th className="px-2 py-2 text-left font-medium">GST Number</th>
+                            <th className="px-2 py-2 text-left font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bulkData.map((row, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50">
+                              <td className="px-2 py-1">{index + 1}</td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.name || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], name: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Company name"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <div className="flex gap-1">
+                                  <Input
+                                    value={row.code || ''}
+                                    onChange={(e) => {
+                                      const newData = [...bulkData];
+                                      newData[index] = { ...newData[index], code: e.target.value };
+                                      setBulkData(newData);
+                                    }}
+                                    placeholder="Code"
+                                    className="h-8"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={async () => {
+                                      const code = await generateCode('company');
+                                      const newData = [...bulkData];
+                                      newData[index] = { ...newData[index], code };
+                                      setBulkData(newData);
+                                    }}
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.email || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], email: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Email"
+                                  type="email"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.phone || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], phone: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Phone"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.gstNumber || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], gstNumber: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="GST"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const newData = bulkData.filter((_, i) => i !== index);
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="p-2 bg-gray-50 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setBulkData([...bulkData, { name: '', code: '', email: '' }]);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Row
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'users' && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-2 py-2 text-left font-medium">#</th>
+                            <th className="px-2 py-2 text-left font-medium">Full Name*</th>
+                            <th className="px-2 py-2 text-left font-medium">Username*</th>
+                            <th className="px-2 py-2 text-left font-medium">Email*</th>
+                            <th className="px-2 py-2 text-left font-medium">Password*</th>
+                            <th className="px-2 py-2 text-left font-medium">Role*</th>
+                            <th className="px-2 py-2 text-left font-medium">Company*</th>
+                            <th className="px-2 py-2 text-left font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bulkData.map((row, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50">
+                              <td className="px-2 py-1">{index + 1}</td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.name || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], name: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Full name"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.username || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], username: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Username"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.email || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], email: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Email"
+                                  type="email"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.password || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], password: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Password"
+                                  type="password"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Select
+                                  value={row.role || 'OPERATOR'}
+                                  onValueChange={(value) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], role: value };
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ADMIN">Admin</SelectItem>
+                                    <SelectItem value="MANAGER">Manager</SelectItem>
+                                    <SelectItem value="OPERATOR">Operator</SelectItem>
+                                    <SelectItem value="VIEWER">Viewer</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Select
+                                  value={row.companyId || ''}
+                                  onValueChange={(value) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], companyId: value };
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {companies.map((company: any) => (
+                                      <SelectItem key={company.id} value={company.id}>
+                                        {company.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const newData = bulkData.filter((_, i) => i !== index);
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="p-2 bg-gray-50 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setBulkData([...bulkData, { name: '', username: '', email: '', password: '', role: 'OPERATOR' }]);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Row
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activeTab === 'factories' && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-2 py-2 text-left font-medium">#</th>
+                            <th className="px-2 py-2 text-left font-medium">Business Unit Name*</th>
+                            <th className="px-2 py-2 text-left font-medium">Code*</th>
+                            <th className="px-2 py-2 text-left font-medium">Type*</th>
+                            <th className="px-2 py-2 text-left font-medium">Company*</th>
+                            <th className="px-2 py-2 text-left font-medium">City</th>
+                            <th className="px-2 py-2 text-left font-medium">State</th>
+                            <th className="px-2 py-2 text-left font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bulkData.map((row, index) => (
+                            <tr key={index} className="border-b hover:bg-gray-50">
+                              <td className="px-2 py-1">{index + 1}</td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.name || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], name: e.target.value };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="Business unit name"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <div className="flex gap-1">
+                                  <Input
+                                    value={row.code || ''}
+                                    onChange={(e) => {
+                                      const newData = [...bulkData];
+                                      newData[index] = { ...newData[index], code: e.target.value };
+                                      setBulkData(newData);
+                                    }}
+                                    placeholder="Code"
+                                    className="h-8"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={async () => {
+                                      const code = await generateCode('business');
+                                      const newData = [...bulkData];
+                                      newData[index] = { ...newData[index], code };
+                                      setBulkData(newData);
+                                    }}
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Select
+                                  value={row.type || 'INTEGRATED'}
+                                  onValueChange={(value) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], type: value };
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {businessTypes.slice(0, 4).map((type) => (
+                                      <SelectItem key={type} value={type}>
+                                        {type}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Select
+                                  value={row.companyId || ''}
+                                  onValueChange={(value) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { ...newData[index], companyId: value };
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {companies.map((company: any) => (
+                                      <SelectItem key={company.id} value={company.id}>
+                                        {company.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Input
+                                  value={row.location?.city || ''}
+                                  onChange={(e) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { 
+                                      ...newData[index], 
+                                      location: { ...newData[index].location, city: e.target.value }
+                                    };
+                                    setBulkData(newData);
+                                  }}
+                                  placeholder="City"
+                                  className="h-8"
+                                />
+                              </td>
+                              <td className="px-2 py-1">
+                                <Select
+                                  value={row.location?.state || ''}
+                                  onValueChange={(value) => {
+                                    const newData = [...bulkData];
+                                    newData[index] = { 
+                                      ...newData[index], 
+                                      location: { ...newData[index].location, state: value }
+                                    };
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="State" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {indianStates.map((state) => (
+                                      <SelectItem key={state} value={state}>
+                                        {state}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-2 py-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const newData = bulkData.filter((_, i) => i !== index);
+                                    setBulkData(newData);
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="p-2 bg-gray-50 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setBulkData([...bulkData, { 
+                              name: '', 
+                              code: '', 
+                              type: 'INTEGRATED', 
+                              companyId: '',
+                              location: { city: '', state: '', address: '' }
+                            }]);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Row
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <DialogFooter>
@@ -1282,6 +1879,8 @@ function MasterDataContent() {
                     state: ''
                   }
                 });
+                setBulkData([]);
+                setCreateMode('single');
               }}>
                 Cancel
               </Button>
