@@ -8,6 +8,7 @@ if (process.env.NODE_ENV === 'development') {
   ReactQueryDevtools = require('@tanstack/react-query-devtools').ReactQueryDevtools;
 }
 import { Toaster } from 'sonner';
+import { AuthProvider } from '@/contexts/auth-context';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -43,9 +44,11 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster richColors position="top-right" />
-      {children}
-      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+      <AuthProvider>
+        <Toaster richColors position="top-right" />
+        {children}
+        {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

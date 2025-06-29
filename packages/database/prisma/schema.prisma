@@ -23,6 +23,10 @@ model Company {
   
   factories Factory[]
   users     User[]
+  vendors   Vendor[]
+  indents   MaterialIndent[]
+  rfqs      RFQ[]
+  purchaseOrders PurchaseOrder[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,6 +47,7 @@ model Factory {
   company     Company  @relation(fields: [companyId], references: [id])
   divisions   Division[]
   equipment   Equipment[]
+  indents     MaterialIndent[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -68,6 +73,13 @@ model User {
   userRoles     UserRole[]
   userPermissions UserPermission[]
   resourceAccess ResourceAccess[]
+  indentsRequested MaterialIndent[] @relation("IndentRequestedBy")
+  indentsApproved MaterialIndent[] @relation("IndentApprovedBy")
+  rfqsCreated   RFQ[]
+  comparisons   QuotationComparison[]
+  posCreated    PurchaseOrder[] @relation("POCreatedBy")
+  posApproved   PurchaseOrder[] @relation("POApprovedBy")
+  approvalRequests ApprovalRequest[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -489,6 +501,225 @@ model MaintenanceRecord {
   @@index([equipmentId, type])
 }
 
+// ==================== PROCUREMENT MODELS ====================
+
+model MaterialIndent {
+  id              String   @id @default(cuid())
+  indentNumber    String   @unique
+  companyId       String
+  factoryId       String
+  departmentId    String?
+  itemName        String
+  itemCode        String?
+  quantity        Float
+  unit            String
+  requiredDate    DateTime
+  priority        IndentPriority @default(MEDIUM)
+  status          IndentStatus @default(PENDING)
+  description     String?
+  specifications  String?
+  requestedById   String
+  approvedById    String?
+  approvedDate    DateTime?
+  rejectionReason String?
+  
+  company         Company  @relation(fields: [companyId], references: [id])
+  factory         Factory  @relation(fields: [factoryId], references: [id])
+  requestedBy     User     @relation("IndentRequestedBy", fields: [requestedById], references: [id])
+  approvedBy      User?    @relation("IndentApprovedBy", fields: [approvedById], references: [id])
+  rfqs            RFQ[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId, factoryId, status])
+  @@index([indentNumber])
+}
+
+model Vendor {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  companyId       String
+  category        String
+  email           String
+  phone           String
+  address         Json
+  gstNumber       String?
+  panNumber       String?
+  bankDetails     Json?
+  paymentTerms    String?
+  deliveryTerms   String?
+  rating          Float    @default(0)
+  totalOrders     Int      @default(0)
+  totalSpend      Float    @default(0)
+  onTimeDelivery  Float    @default(0)
+  qualityScore    Float    @default(0)
+  status          VendorStatus @default(ACTIVE)
+  certifications  String[]
+  
+  company         Company  @relation(fields: [companyId], references: [id])
+  rfqVendors      RFQVendor[]
+  quotations      Quotation[]
+  purchaseOrders  PurchaseOrder[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId, category, status])
+}
+
+model RFQ {
+  id              String   @id @default(cuid())
+  rfqNumber       String   @unique
+  companyId       String
+  title           String
+  indentId        String?
+  items           Json     // Array of {name, quantity, unit, specifications}
+  dueDate         DateTime
+  deliveryDate    DateTime?
+  terms           String?
+  instructions    String?
+  status          RFQStatus @default(DRAFT)
+  createdById     String
+  
+  company         Company  @relation(fields: [companyId], references: [id])
+  indent          MaterialIndent? @relation(fields: [indentId], references: [id])
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  vendors         RFQVendor[]
+  quotations      Quotation[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId, status])
+  @@index([rfqNumber])
+}
+
+model RFQVendor {
+  id          String   @id @default(cuid())
+  rfqId       String
+  vendorId    String
+  sentDate    DateTime?
+  responded   Boolean  @default(false)
+  
+  rfq         RFQ      @relation(fields: [rfqId], references: [id])
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([rfqId, vendorId])
+  @@index([rfqId, vendorId])
+}
+
+model Quotation {
+  id              String   @id @default(cuid())
+  quotationNumber String   @unique
+  rfqId           String
+  vendorId        String
+  items           Json     // Array of {name, quantity, unit, unitPrice, totalPrice, deliveryDays}
+  totalAmount     Float
+  validUntil      DateTime
+  paymentTerms    String?
+  deliveryTerms   String?
+  warranty        String?
+  notes           String?
+  status          QuotationStatus @default(PENDING)
+  receivedDate    DateTime @default(now())
+  
+  rfq             RFQ      @relation(fields: [rfqId], references: [id])
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  comparison      QuotationComparison?
+  purchaseOrder   PurchaseOrder?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([rfqId, vendorId, status])
+  @@index([quotationNumber])
+}
+
+model QuotationComparison {
+  id              String   @id @default(cuid())
+  rfqId           String
+  quotationId     String   @unique
+  priceScore      Float
+  deliveryScore   Float
+  qualityScore    Float
+  vendorScore     Float
+  totalScore      Float
+  selected        Boolean  @default(false)
+  remarks         String?
+  comparedById    String
+  
+  quotation       Quotation @relation(fields: [quotationId], references: [id])
+  comparedBy      User     @relation(fields: [comparedById], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([rfqId, selected])
+}
+
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNumber        String   @unique
+  companyId       String
+  vendorId        String
+  quotationId     String?  @unique
+  indentId        String?
+  items           Json     // Array of {name, quantity, unit, unitPrice, totalPrice}
+  totalAmount     Float
+  paymentTerms    String?
+  deliveryTerms   String?
+  deliveryDate    DateTime?
+  shippingAddress Json?
+  billingAddress  Json?
+  status          POStatus @default(DRAFT)
+  approvedById    String?
+  approvedDate    DateTime?
+  createdById     String
+  
+  company         Company  @relation(fields: [companyId], references: [id])
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  quotation       Quotation? @relation(fields: [quotationId], references: [id])
+  approvedBy      User?    @relation("POApprovedBy", fields: [approvedById], references: [id])
+  createdBy       User     @relation("POCreatedBy", fields: [createdById], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([companyId, vendorId, status])
+  @@index([poNumber])
+}
+
+model ApprovalRequest {
+  id              String   @id @default(cuid())
+  type            ApprovalType
+  referenceId     String   // ID of the entity being approved (indent, PO, etc.)
+  referenceType   String   // Type of entity (MaterialIndent, PurchaseOrder, etc.)
+  title           String
+  amount          Float?
+  priority        ApprovalPriority @default(MEDIUM)
+  level           Int      // Current approval level
+  status          ApprovalStatus @default(PENDING)
+  requestedById   String
+  requestDate     DateTime @default(now())
+  approvalChain   Json     // Array of {level, role, status, approvedBy, approvedDate}
+  currentLevel    Int      @default(1)
+  remarks         String?
+  
+  requestedBy     User     @relation(fields: [requestedById], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type, status, priority])
+  @@index([requestedById])
+  @@index([referenceId, referenceType])
+}
+
 // ==================== ENUMS ====================
 
 enum Role {
@@ -586,4 +817,78 @@ enum AccessLevel {
   EDIT
   ADMIN
   OWNER
+}
+
+enum IndentPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum IndentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RFQ_CREATED
+  PO_CREATED
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  PENDING_APPROVAL
+}
+
+enum RFQStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum QuotationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED_TO_PO
+}
+
+enum POStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+  ACKNOWLEDGED
+  PARTIALLY_DELIVERED
+  DELIVERED
+  CANCELLED
+  CLOSED
+}
+
+enum ApprovalType {
+  MATERIAL_INDENT
+  PURCHASE_ORDER
+  VENDOR_REGISTRATION
+  QUOTATION_ACCEPTANCE
+}
+
+enum ApprovalPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  ESCALATED
 }

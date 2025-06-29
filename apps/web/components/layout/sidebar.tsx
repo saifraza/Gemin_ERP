@@ -42,6 +42,7 @@ interface SidebarSection {
   title: string;
   items: SidebarItem[];
   icon?: React.ReactNode;
+  href?: string;
 }
 
 interface SidebarProps {
@@ -151,6 +152,7 @@ const defaultSections: SidebarSection[] = [
   {
     title: 'Supply Chain',
     icon: <Package size={16} />,
+    href: '/supply-chain',
     items: [
       { 
         id: 'procurement', 
@@ -407,11 +409,17 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, selectedModule 
           <div key={section.title} className="sidebar-section">
             <div 
               className="sidebar-title cursor-pointer flex items-center justify-between"
-              onClick={() => !selectedModule && toggleSection(section.title)}
+              onClick={() => {
+                if (section.href) {
+                  router.push(section.href);
+                } else if (!selectedModule) {
+                  toggleSection(section.title);
+                }
+              }}
             >
               <div className="flex items-center gap-2">
                 {section.icon && <span className="text-gray-500">{section.icon}</span>}
-                <span>{section.title}</span>
+                <span className={section.href ? 'hover:text-blue-600' : ''}>{section.title}</span>
               </div>
               {!selectedModule && (
                 <span className="text-gray-400">

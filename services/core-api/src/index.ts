@@ -17,6 +17,7 @@ import { factoryAccessRoutes } from './routes/factory-access.js';
 import { rbacRoutes } from './routes/rbac.js';
 import { testCompaniesRoutes } from './routes/test-companies.js';
 import { seedRoutes } from './routes/seed.js';
+import procurement from './routes/procurement/index.js';
 
 const log = pino({ name: 'core-api' });
 
@@ -142,6 +143,7 @@ app.route('/api/factory-access', factoryAccessRoutes);
 app.route('/api/rbac', rbacRoutes);
 app.route('/api/test-companies', testCompaniesRoutes);
 app.route('/api/seed', seedRoutes);
+app.route('/api/procurement', procurement);
 
 // Error handling
 app.onError((err, c) => {

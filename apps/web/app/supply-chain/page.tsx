@@ -20,111 +20,211 @@ import {
   CheckCircle2,
   XCircle,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  ArrowRight,
+  FileSearch,
+  GitCompare,
+  ClipboardCheck,
+  PackageCheck,
+  Repeat,
+  TruckIcon,
+  CheckSquare,
+  Package2,
+  FileSpreadsheet
 } from 'lucide-react';
 import Link from 'next/link';
 
+// Business Cycle Flow
+const businessCycleSteps = [
+  {
+    id: 'indent',
+    title: 'Material Indent',
+    icon: FileText,
+    description: 'Raise material requirements',
+    status: 'active',
+    count: 23,
+    href: '/supply-chain/procurement/indent'
+  },
+  {
+    id: 'rfq',
+    title: 'RFQ Management',
+    icon: FileSearch,
+    description: 'Request for quotations',
+    status: 'active',
+    count: 15,
+    href: '/supply-chain/procurement/rfq'
+  },
+  {
+    id: 'quotations',
+    title: 'Quotations',
+    icon: FileSpreadsheet,
+    description: 'Vendor quotations',
+    status: 'active',
+    count: 42,
+    href: '/supply-chain/procurement/quotations'
+  },
+  {
+    id: 'comparison',
+    title: 'Compare & Select',
+    icon: GitCompare,
+    description: 'Compare vendor quotes',
+    status: 'pending',
+    count: 8,
+    href: '/supply-chain/procurement/comparison'
+  },
+  {
+    id: 'approval',
+    title: 'Approval',
+    icon: ClipboardCheck,
+    description: 'Get management approval',
+    status: 'pending',
+    count: 5,
+    href: '/supply-chain/procurement/approval'
+  },
+  {
+    id: 'po',
+    title: 'Purchase Order',
+    icon: ShoppingCart,
+    description: 'Create & send PO',
+    status: 'pending',
+    count: 0,
+    href: '/supply-chain/procurement/purchase-orders'
+  },
+  {
+    id: 'tracking',
+    title: 'Order Tracking',
+    icon: Package2,
+    description: 'Track shipments',
+    status: 'pending',
+    count: 18,
+    href: '/supply-chain/tracking'
+  },
+  {
+    id: 'receipt',
+    title: 'Goods Receipt',
+    icon: PackageCheck,
+    description: 'Receive & inspect',
+    status: 'pending',
+    count: 12,
+    href: '/supply-chain/warehouse/receipt'
+  },
+  {
+    id: 'quality',
+    title: 'Quality Check',
+    icon: CheckSquare,
+    description: 'Verify quality standards',
+    status: 'pending',
+    count: 7,
+    href: '/supply-chain/quality'
+  },
+  {
+    id: 'storage',
+    title: 'Put Away',
+    icon: Warehouse,
+    description: 'Store in warehouse',
+    status: 'pending',
+    count: 0,
+    href: '/supply-chain/warehouse/putaway'
+  }
+];
+
+// Main Supply Chain Modules
 const supplyChainModules = [
   {
     title: 'Procurement',
     href: '/supply-chain/procurement',
     icon: ShoppingCart,
-    description: 'Purchase orders, requisitions, and vendor management',
-    stats: { pending: 12, approved: 145, value: '₹2.4M' },
+    description: 'End-to-end procurement process from indent to PO',
+    metrics: { active: 89, pending: 23, value: '₹4.2M' },
     color: 'text-blue-600',
-    bgColor: 'bg-blue-50'
+    bgColor: 'bg-blue-50',
+    subModules: [
+      'Material Indents',
+      'RFQ Management', 
+      'Vendor Quotations',
+      'Price Comparison',
+      'Purchase Orders'
+    ]
   },
   {
     title: 'Inventory Management',
     href: '/supply-chain/inventory',
     icon: Package,
-    description: 'Stock control, item master, and inventory optimization',
-    stats: { items: 1250, lowStock: 23, value: '₹8.2M' },
+    description: 'Real-time inventory tracking and optimization',
+    metrics: { items: 1250, lowStock: 23, accuracy: '98.5%' },
     color: 'text-green-600',
-    bgColor: 'bg-green-50'
+    bgColor: 'bg-green-50',
+    subModules: [
+      'Stock Levels',
+      'Item Master',
+      'Stock Movements',
+      'Reorder Management',
+      'Inventory Valuation'
+    ]
   },
   {
-    title: 'Warehouse Management',
+    title: 'Warehouse Operations',
     href: '/supply-chain/warehouse',
     icon: Warehouse,
-    description: 'Receiving, storage, picking, and shipping operations',
-    stats: { locations: 5, utilization: 78, pending: 34 },
+    description: 'Optimize warehouse efficiency and space utilization',
+    metrics: { utilization: '78%', pending: 34, efficiency: '92%' },
     color: 'text-purple-600',
-    bgColor: 'bg-purple-50'
+    bgColor: 'bg-purple-50',
+    subModules: [
+      'Goods Receipt',
+      'Put Away',
+      'Picking',
+      'Packing',
+      'Shipping'
+    ]
   },
   {
     title: 'Transportation',
     href: '/supply-chain/transportation',
     icon: Truck,
-    description: 'Shipment planning, carrier management, and tracking',
-    stats: { activeShipments: 18, delivered: 234, onTime: 94 },
+    description: 'Fleet management and shipment tracking',
+    metrics: { active: 18, delivered: 234, onTime: '94%' },
     color: 'text-orange-600',
-    bgColor: 'bg-orange-50'
-  },
-  {
-    title: 'Demand Planning',
-    href: '/supply-chain/demand-planning',
-    icon: TrendingUp,
-    description: 'Forecasting, collaborative planning, and demand sensing',
-    stats: { accuracy: 87, forecasts: 45, alerts: 3 },
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50'
-  },
-  {
-    title: 'Supply Planning',
-    href: '/supply-chain/supply-planning',
-    icon: BarChart3,
-    description: 'Distribution planning, master planning, and ATP',
-    stats: { plans: 12, constraints: 5, optimized: 89 },
-    color: 'text-pink-600',
-    bgColor: 'bg-pink-50'
+    bgColor: 'bg-orange-50',
+    subModules: [
+      'Fleet Management',
+      'Route Planning',
+      'Shipment Tracking',
+      'Carrier Management',
+      'Freight Cost'
+    ]
   }
 ];
 
 const kpis = [
   { 
-    label: 'Inventory Turnover', 
-    value: '8.2x', 
-    trend: '+12%', 
+    label: 'Procurement Cycle Time', 
+    value: '4.2 days', 
+    trend: '-12%', 
     isPositive: true,
-    description: 'Last 30 days'
+    description: 'Indent to PO'
   },
   { 
-    label: 'Perfect Order Rate', 
+    label: 'Vendor Performance', 
     value: '94.3%', 
     trend: '+2.1%', 
     isPositive: true,
-    description: 'This month'
+    description: 'On-time delivery'
   },
   { 
-    label: 'Stock-out Rate', 
-    value: '2.8%', 
-    trend: '-0.5%', 
+    label: 'Inventory Turnover', 
+    value: '8.2x', 
+    trend: '+5%', 
     isPositive: true,
-    description: 'vs. target 3%'
+    description: 'Annual'
   },
   { 
-    label: 'Supply Chain Cost', 
-    value: '₹12.4M', 
-    trend: '+5.2%', 
-    isPositive: false,
+    label: 'Cost Savings', 
+    value: '₹2.4M', 
+    trend: '+18%', 
+    isPositive: true,
     description: 'This quarter'
   }
-];
-
-const recentActivities = [
-  { type: 'po', icon: FileText, text: 'PO #2024-1234 approved for ₹125,000', time: '5 minutes ago', status: 'success' },
-  { type: 'inventory', icon: AlertCircle, text: 'Low stock alert: Raw Sugar (< 500 MT)', time: '15 minutes ago', status: 'warning' },
-  { type: 'shipment', icon: Truck, text: 'Shipment #SH-4567 delivered to Mumbai plant', time: '1 hour ago', status: 'success' },
-  { type: 'vendor', icon: Users, text: 'New vendor registration: ABC Chemicals Ltd', time: '2 hours ago', status: 'info' },
-  { type: 'quality', icon: XCircle, text: 'Quality issue reported for batch #B-8901', time: '3 hours ago', status: 'error' }
-];
-
-const topSuppliers = [
-  { name: 'Krishna Sugars Ltd', spend: '₹2.4M', orders: 145, rating: 4.8, performance: 96 },
-  { name: 'Bharat Chemicals', spend: '₹1.8M', orders: 89, rating: 4.5, performance: 92 },
-  { name: 'Global Packaging Co', spend: '₹1.2M', orders: 234, rating: 4.7, performance: 94 },
-  { name: 'Metro Logistics', spend: '₹980K', orders: 156, rating: 4.6, performance: 91 }
 ];
 
 export default function SupplyChainPage() {
@@ -134,20 +234,20 @@ export default function SupplyChainPage() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Supply Chain Management</h1>
-          <p className="text-gray-600 mt-1">End-to-end supply chain visibility and control</p>
+          <p className="text-gray-600 mt-1">Complete procurement to delivery cycle management</p>
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {kpis.map((kpi, index) => (
-            <Card key={index} className="p-6">
+            <Card key={index} className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <p className="text-sm text-gray-600">{kpi.label}</p>
                 <Badge 
                   variant={kpi.isPositive ? "default" : "destructive"}
                   className="text-xs"
                 >
-                  {kpi.isPositive ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
+                  {kpi.isPositive ? <ArrowDownRight className="w-3 h-3 mr-1" /> : <ArrowUpRight className="w-3 h-3 mr-1" />}
                   {kpi.trend}
                 </Badge>
               </div>
@@ -157,8 +257,44 @@ export default function SupplyChainPage() {
           ))}
         </div>
 
+        {/* Business Cycle Flow */}
+        <Card className="mb-8 p-6">
+          <h2 className="text-lg font-semibold mb-4">Procurement Business Cycle</h2>
+          <div className="flex items-center gap-2 overflow-x-auto pb-4">
+            {businessCycleSteps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.id} className="flex items-center">
+                  <Link href={step.href}>
+                    <div className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all cursor-pointer min-w-[120px] ${
+                      step.status === 'active' 
+                        ? 'border-blue-500 bg-blue-50 hover:bg-blue-100' 
+                        : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                    }`}>
+                      <div className={`p-2 rounded-full mb-2 ${
+                        step.status === 'active' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-medium text-center">{step.title}</span>
+                      {step.count > 0 && (
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          {step.count}
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+                  {index < businessCycleSteps.length - 1 && (
+                    <ArrowRight className="w-5 h-5 text-gray-400 mx-2 flex-shrink-0" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
         {/* Module Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {supplyChainModules.map((module) => {
             const Icon = module.icon;
             return (
@@ -166,19 +302,33 @@ export default function SupplyChainPage() {
                 <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <div className="flex items-start justify-between mb-4">
                     <div className={`p-3 rounded-lg ${module.bgColor}`}>
-                      <Icon className={`w-6 h-6 ${module.color}`} />
+                      <Icon className={`w-8 h-8 ${module.color}`} />
                     </div>
-                    <ArrowUpRight className="w-4 h-4 text-gray-400" />
+                    <ArrowUpRight className="w-5 h-5 text-gray-400" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">{module.title}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{module.description}</p>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {Object.entries(module.stats).map(([key, value]) => (
-                      <Badge key={key} variant="secondary" className="font-normal">
-                        {key}: {typeof value === 'number' && key.includes('value') ? `₹${value}` : 
-                               key === 'onTime' || key === 'utilization' || key === 'accuracy' || key === 'optimized' ? `${value}%` : value}
-                      </Badge>
+                  <h3 className="font-semibold text-xl mb-2">{module.title}</h3>
+                  <p className="text-gray-600 mb-4">{module.description}</p>
+                  
+                  {/* Metrics */}
+                  <div className="flex flex-wrap gap-4 mb-4">
+                    {Object.entries(module.metrics).map(([key, value]) => (
+                      <div key={key} className="text-sm">
+                        <span className="text-gray-500 capitalize">{key}:</span>
+                        <span className="font-semibold ml-1">{value}</span>
+                      </div>
                     ))}
+                  </div>
+                  
+                  {/* Sub-modules */}
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-500 uppercase mb-2">Key Features</p>
+                    <div className="flex flex-wrap gap-2">
+                      {module.subModules.map((subModule, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {subModule}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </Card>
               </Link>
@@ -186,82 +336,57 @@ export default function SupplyChainPage() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activities */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Recent Activities</h2>
-              <Button variant="ghost" size="sm">View All</Button>
-            </div>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => {
-                const Icon = activity.icon;
-                return (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      activity.status === 'success' ? 'bg-green-50' :
-                      activity.status === 'warning' ? 'bg-yellow-50' :
-                      activity.status === 'error' ? 'bg-red-50' : 'bg-blue-50'
-                    }`}>
-                      <Icon className={`w-4 h-4 ${
-                        activity.status === 'success' ? 'text-green-600' :
-                        activity.status === 'warning' ? 'text-yellow-600' :
-                        activity.status === 'error' ? 'text-red-600' : 'text-blue-600'
-                      }`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.text}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        <Clock className="w-3 h-3 inline mr-1" />
-                        {activity.time}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+          <Card className="p-4 border-l-4 border-l-yellow-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending Approvals</p>
+                <p className="text-2xl font-bold">23</p>
+                <p className="text-xs text-gray-500 mt-1">5 urgent</p>
+              </div>
+              <ClipboardCheck className="w-8 h-8 text-yellow-500 opacity-20" />
             </div>
           </Card>
-
-          {/* Top Suppliers */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Top Suppliers</h2>
-              <Button variant="ghost" size="sm">Manage Suppliers</Button>
+          
+          <Card className="p-4 border-l-4 border-l-red-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Low Stock Items</p>
+                <p className="text-2xl font-bold">17</p>
+                <p className="text-xs text-gray-500 mt-1">Immediate action required</p>
+              </div>
+              <AlertCircle className="w-8 h-8 text-red-500 opacity-20" />
             </div>
-            <div className="space-y-4">
-              {topSuppliers.map((supplier, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium">{supplier.name}</p>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-xs text-gray-500">Spend: {supplier.spend}</span>
-                      <span className="text-xs text-gray-500">Orders: {supplier.orders}</span>
-                      <span className="text-xs text-gray-500">Rating: ⭐ {supplier.rating}</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{supplier.performance}%</p>
-                    <Progress value={supplier.performance} className="w-20 h-2 mt-1" />
-                  </div>
-                </div>
-              ))}
+          </Card>
+          
+          <Card className="p-4 border-l-4 border-l-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">In Transit</p>
+                <p className="text-2xl font-bold">34</p>
+                <p className="text-xs text-gray-500 mt-1">Expected this week: 12</p>
+              </div>
+              <TruckIcon className="w-8 h-8 text-green-500 opacity-20" />
             </div>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card className="mt-6 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
-              <span className="text-sm font-medium">3 items require immediate attention</span>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline">View Alerts</Button>
-              <Button size="sm">Create Purchase Order</Button>
-            </div>
-          </div>
-        </Card>
+        {/* Action Buttons */}
+        <div className="flex gap-4 mt-8">
+          <Button>
+            <FileText className="w-4 h-4 mr-2" />
+            Create Material Indent
+          </Button>
+          <Button variant="outline">
+            <Package className="w-4 h-4 mr-2" />
+            Check Inventory
+          </Button>
+          <Button variant="outline">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            View Analytics
+          </Button>
+        </div>
       </div>
     </DashboardLayout>
   );

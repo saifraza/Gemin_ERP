@@ -178,3 +178,17 @@ export const requireApprove = (scope?: PermissionCheckOptions['scope'], scopeIdP
 // Generic permission middleware for any module
 export const requireModulePermission = (module: string, action: string, scope?: PermissionCheckOptions['scope'], scopeIdParam?: string) => 
   requirePermission({ permission: `${module}_${action}`, scope, scopeIdParam });
+
+// Company access middleware
+export const requireCompanyAccess = () => {
+  return async (c: Context, next: Next) => {
+    const payload = c.get('jwtPayload');
+    if (!payload || !payload.companyId) {
+      return c.json({ error: 'Company access required' }, 403);
+    }
+    
+    // Set company ID in context for use in queries
+    c.set('companyId', payload.companyId);
+    await next();
+  };
+};

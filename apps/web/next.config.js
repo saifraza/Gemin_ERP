@@ -8,6 +8,7 @@ const nextConfig = {
     NEXT_PUBLIC_WS_URL: process.env.VITE_WS_URL || process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000',
     NEXT_PUBLIC_MCP_URL: process.env.VITE_MCP_URL || process.env.NEXT_PUBLIC_MCP_URL || 'http://localhost:3000',
   },
+  output: 'standalone',
   // PWA configuration
   async headers() {
     return [
