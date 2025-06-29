@@ -84,6 +84,7 @@ function MasterDataContent() {
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'companies');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0);
   
   // Generate business code
   const generateBusinessCode = (type: string) => {
@@ -135,7 +136,16 @@ function MasterDataContent() {
   }, [tabFromUrl]);
 
   useEffect(() => {
-    loadAllData();
+    // Only load data if it hasn't been loaded recently (within 5 minutes)
+    const fiveMinutes = 5 * 60 * 1000;
+    const shouldReload = Date.now() - lastLoadTime > fiveMinutes;
+    
+    if (shouldReload || companies.length === 0) {
+      loadAllData();
+    } else {
+      setLoading(false);
+      console.log('[PERFORMANCE] Using cached data, skipping reload');
+    }
   }, []);
 
   // Handle business type change
@@ -200,34 +210,37 @@ function MasterDataContent() {
   };
 
   const loadAllData = async () => {
+    const startTime = Date.now();
     setLoading(true);
     try {
-      // Load companies
-      const companyRes = await fetch(`${API_URL}/api/companies`, {
-        headers: getAuthHeaders()
-      });
-      if (companyRes.ok) {
-        const companyData = await companyRes.json();
-        setCompanies(companyData);
-      }
+      // Make all API calls in parallel for better performance
+      const [companyRes, userRes, factoryRes] = await Promise.all([
+        fetch(`${API_URL}/api/companies`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/users`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/api/factories`, { headers: getAuthHeaders() })
+      ]);
 
-      // Load users
-      const userRes = await fetch(`${API_URL}/api/users`, {
-        headers: getAuthHeaders()
-      });
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        setUsers(userData);
-      }
+      // Process responses in parallel
+      const results = await Promise.all([
+        companyRes.ok ? companyRes.json() : null,
+        userRes.ok ? userRes.json() : null,
+        factoryRes.ok ? factoryRes.json() : null
+      ]);
 
-      // Load factories
-      const factoryRes = await fetch(`${API_URL}/api/factories`, {
-        headers: getAuthHeaders()
-      });
-      if (factoryRes.ok) {
-        const factoryData = await factoryRes.json();
-        setFactories(factoryData);
+      // Update state with results
+      if (results[0]) setCompanies(results[0]);
+      if (results[1]) setUsers(results[1]);
+      if (results[2]) setFactories(results[2]);
+
+      const loadTime = Date.now() - startTime;
+      console.log(`[PERFORMANCE] Master Data loaded in ${loadTime}ms`);
+      
+      // Show warning if load time is too slow
+      if (loadTime > 2000) {
+        console.warn(`[PERFORMANCE WARNING] Master Data load took ${loadTime}ms - this is too slow!`);
       }
+      
+      setLastLoadTime(Date.now());
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
@@ -501,7 +514,12 @@ function MasterDataContent() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-full">
-          <div>Loading master data...</div>
+          <div className="text-center">
+            <div className="text-lg font-medium">Loading master data...</div>
+            <div className="text-sm text-gray-500 mt-2">
+              <div className="animate-pulse">Fetching companies, users, and business units</div>
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     );

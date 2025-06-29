@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import fetch from 'node-fetch';
 
 console.log('Express API Gateway starting...');
@@ -31,11 +32,30 @@ console.log('Environment:', {
   NODE_ENV: process.env.NODE_ENV
 });
 
+// Enable compression for all responses
+app.use(compression());
+
 // Enable CORS for all origins
 app.use(cors({
   origin: true,
   credentials: true
 }));
+
+// Performance monitoring middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[PERFORMANCE] ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+    
+    if (duration > 1000) {
+      console.warn(`[PERFORMANCE WARNING] Slow request: ${req.method} ${req.path} took ${duration}ms`);
+    }
+  });
+  
+  next();
+});
 
 app.use(express.json());
 app.use(express.text());
