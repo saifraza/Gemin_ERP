@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 import { FactoryContext } from '../middleware/factory-access.js';
 
 export abstract class FactoryAwareService {

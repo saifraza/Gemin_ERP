@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index.js';
-import { IndentPriority, IndentStatus } from '@prisma/client';
+import pkg from '@prisma/client';
+const { IndentPriority, IndentStatus } = pkg;
 
 const indents = new Hono();
 

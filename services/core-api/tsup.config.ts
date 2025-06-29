@@ -9,4 +9,8 @@ export default defineConfig({
   clean: true,
   target: 'node20',
   external: ['@prisma/client'],
+  esbuildOptions(options) {
+    options.mainFields = ['module', 'main'];
+  },
+  noExternal: ['@prisma/client'],
 });

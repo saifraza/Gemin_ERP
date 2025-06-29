@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index.js';
-import { QuotationStatus } from '@prisma/client';
+import pkg from '@prisma/client';
+const { QuotationStatus } = pkg;
 
 const quotations = new Hono();
 
