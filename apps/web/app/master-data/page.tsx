@@ -31,6 +31,22 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Memoized tab component for better performance
 const TabButton = memo(({ 
@@ -66,6 +82,43 @@ const TabButton = memo(({
 
 TabButton.displayName = 'TabButton';
 
+// Business types
+const businessTypes = [
+  'Manufacturing',
+  'Retail',
+  'Services',
+  'Technology',
+  'Healthcare',
+  'Construction',
+  'Energy',
+  'Logistics',
+  'Finance',
+  'Real Estate',
+  'Agriculture',
+  'Mining',
+  'Telecommunications',
+  'Media',
+  'Education',
+  'Hospitality',
+  'Transportation',
+  'Utilities',
+  'Pharmaceutical',
+  'Automotive'
+];
+
+// Indian states
+const indianStates = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  // Union Territories
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
 function MasterDataContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -73,6 +126,10 @@ function MasterDataContent() {
   const [activeTab, setActiveTab] = useState<string>(tabFromUrl || 'companies');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  
+  // Create modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState<any>({});
 
   // Update activeTab when URL changes
   useEffect(() => {
@@ -136,6 +193,30 @@ function MasterDataContent() {
   const createUser = useCreateUser();
   const createFactory = useCreateFactory();
   const deleteCompany = useDeleteCompany();
+  
+  // Handle create
+  const handleCreate = async () => {
+    try {
+      if (activeTab === 'companies') {
+        await createCompany.mutateAsync(createFormData);
+      } else if (activeTab === 'users') {
+        await createUser.mutateAsync(createFormData);
+      } else if (activeTab === 'factories') {
+        // Generate business code
+        const code = `BU${Date.now().toString(36).toUpperCase()}`;
+        await createFactory.mutateAsync({ ...createFormData, code });
+      }
+      setShowCreateModal(false);
+      setCreateFormData({});
+    } catch (error) {
+      console.error('Error creating entity:', error);
+    }
+  };
+  
+  // Auto-generate business code
+  const generateBusinessCode = () => {
+    return `BU${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  };
 
   // Export functionality
   const handleExport = useCallback(async () => {
@@ -263,8 +344,25 @@ function MasterDataContent() {
     },
   ];
 
+  // Prepare AI assistant data
+  const aiAssistantData = {
+    activeTab,
+    searchQuery: debouncedSearch,
+    stats: {
+      companies: (companiesData?.pages?.[0] as any)?.pagination?.total || 0,
+      users: (usersData?.pages?.[0] as any)?.pagination?.total || 0,
+      businessUnits: (factoriesData?.pages?.[0] as any)?.pagination?.total || 0,
+    },
+    currentData: activeTab === 'companies' ? companies.slice(0, 10) : // Send only first 10 records to optimize tokens
+                 activeTab === 'users' ? users.slice(0, 10) :
+                 activeTab === 'factories' ? factories.slice(0, 10) : [],
+    dataColumns: activeTab === 'companies' ? companyColumns :
+                 activeTab === 'users' ? userColumns :
+                 activeTab === 'factories' ? factoryColumns : [],
+  };
+
   return (
-    <DashboardLayout>
+    <DashboardLayout aiAssistantData={aiAssistantData}>
       <div className="p-6 max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -360,7 +458,7 @@ function MasterDataContent() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button>
+            <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : activeTab === 'factories' ? 'Business' : 'New'}
             </Button>
@@ -444,6 +542,362 @@ function MasterDataContent() {
             </div>
           )}
         </Card>
+        
+        {/* Create Modal */}
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                Create New {activeTab === 'companies' ? 'Company' : activeTab === 'users' ? 'User' : 'Business Unit'}
+              </DialogTitle>
+              <DialogDescription>
+                Fill in the details below to create a new {activeTab === 'companies' ? 'company' : activeTab === 'users' ? 'user' : 'business unit'}.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              {/* Company Form */}
+              {activeTab === 'companies' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Company Name</Label>
+                      <Input
+                        id="name"
+                        value={createFormData.name || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                        placeholder="Enter company name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="code">Company Code</Label>
+                      <Input
+                        id="code"
+                        value={createFormData.code || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
+                        placeholder="Enter company code"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={createFormData.email || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                        placeholder="company@example.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        value={createFormData.phone || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, phone: e.target.value })}
+                        placeholder="+91 98765 43210"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={createFormData.address || ''}
+                      onChange={(e) => setCreateFormData({ ...createFormData, address: e.target.value })}
+                      placeholder="Enter company address"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="gstNumber">GST Number</Label>
+                      <Input
+                        id="gstNumber"
+                        value={createFormData.gstNumber || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, gstNumber: e.target.value })}
+                        placeholder="Enter GST number"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="panNumber">PAN Number</Label>
+                      <Input
+                        id="panNumber"
+                        value={createFormData.panNumber || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, panNumber: e.target.value })}
+                        placeholder="Enter PAN number"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* User Form */}
+              {activeTab === 'users' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={createFormData.name || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        value={createFormData.username || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, username: e.target.value })}
+                        placeholder="Enter username"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={createFormData.email || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={createFormData.password || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                        placeholder="Enter password"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="role">Role</Label>
+                      <Select value={createFormData.role || ''} onValueChange={(value) => setCreateFormData({ ...createFormData, role: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ADMIN">Admin</SelectItem>
+                          <SelectItem value="MANAGER">Manager</SelectItem>
+                          <SelectItem value="OPERATOR">Operator</SelectItem>
+                          <SelectItem value="VIEWER">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="companyId">Company</Label>
+                      <Select value={createFormData.companyId || ''} onValueChange={(value) => setCreateFormData({ ...createFormData, companyId: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((company: any) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+              
+              {/* Business Unit Form */}
+              {activeTab === 'factories' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="name">Business Unit Name</Label>
+                      <Input
+                        id="name"
+                        value={createFormData.name || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                        placeholder="Enter business unit name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="code">Business Code</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="code"
+                          value={createFormData.code || generateBusinessCode()}
+                          onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
+                          placeholder="Auto-generated"
+                          readOnly
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setCreateFormData({ ...createFormData, code: generateBusinessCode() })}
+                        >
+                          Generate
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="type">Business Type</Label>
+                      <Select value={createFormData.type || ''} onValueChange={(value) => setCreateFormData({ ...createFormData, type: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select business type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {businessTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="companyId">Company</Label>
+                      <Select value={createFormData.companyId || ''} onValueChange={(value) => setCreateFormData({ ...createFormData, companyId: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select company" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((company: any) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Location Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={createFormData.location?.city || ''}
+                          onChange={(e) => setCreateFormData({ 
+                            ...createFormData, 
+                            location: { ...createFormData.location, city: e.target.value }
+                          })}
+                          placeholder="Enter city"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="state">State</Label>
+                        <Select 
+                          value={createFormData.location?.state || ''} 
+                          onValueChange={(value) => setCreateFormData({ 
+                            ...createFormData, 
+                            location: { ...createFormData.location, state: value }
+                          })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {indianStates.map((state) => (
+                              <SelectItem key={state} value={state}>
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="address"
+                          value={createFormData.location?.address || ''}
+                          onChange={(e) => setCreateFormData({ 
+                            ...createFormData, 
+                            location: { ...createFormData.location, address: e.target.value }
+                          })}
+                          placeholder="Enter address"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedCompany = companies.find((c: any) => c.id === createFormData.companyId);
+                            if (selectedCompany?.address) {
+                              setCreateFormData({ 
+                                ...createFormData, 
+                                location: { 
+                                  ...createFormData.location, 
+                                  address: selectedCompany.address 
+                                }
+                              });
+                            }
+                          }}
+                        >
+                          Copy from Company
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Dynamic fields based on business type */}
+                  {createFormData.type === 'Manufacturing' && (
+                    <div>
+                      <Label htmlFor="capacity">Production Capacity (units/month)</Label>
+                      <Input
+                        id="capacity"
+                        type="number"
+                        value={createFormData.capacity || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, capacity: e.target.value })}
+                        placeholder="Enter production capacity"
+                      />
+                    </div>
+                  )}
+                  {createFormData.type === 'Retail' && (
+                    <div>
+                      <Label htmlFor="storeSize">Store Size (sq ft)</Label>
+                      <Input
+                        id="storeSize"
+                        type="number"
+                        value={createFormData.storeSize || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, storeSize: e.target.value })}
+                        placeholder="Enter store size"
+                      />
+                    </div>
+                  )}
+                  {createFormData.type === 'Services' && (
+                    <div>
+                      <Label htmlFor="serviceTypes">Service Types</Label>
+                      <Input
+                        id="serviceTypes"
+                        value={createFormData.serviceTypes || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, serviceTypes: e.target.value })}
+                        placeholder="Enter service types (comma separated)"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} disabled={createCompany.isPending || createUser.isPending || createFactory.isPending}>
+                {(createCompany.isPending || createUser.isPending || createFactory.isPending) ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

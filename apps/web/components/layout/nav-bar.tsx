@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 interface NavBarProps {
   activeTab?: string;
@@ -23,17 +24,51 @@ const modules = [
   { id: 'specialized', name: 'Specialized Modules', icon: '🛡️', moduleKey: 'specialized-modules' },
 ];
 
-const tabs = [
-  'Dashboard',
-  'Transactions', 
-  'Reports',
-  'Analytics',
-  'Settings'
-];
+// Module-specific navigation tabs
+const moduleTabsConfig: Record<string, string[]> = {
+  'master-data': ['Overview', 'Companies', 'Users', 'Business Units', 'Import/Export', 'Settings'],
+  'financial-management': ['Dashboard', 'General Ledger', 'Accounts', 'Transactions', 'Reports', 'Budget'],
+  'supply-chain-management': ['Dashboard', 'Inventory', 'Procurement', 'Warehouse', 'Logistics', 'Analytics'],
+  'manufacturing': ['Dashboard', 'Production', 'Shop Floor', 'Quality', 'Planning', 'Reports'],
+  'human-resources': ['Dashboard', 'Employees', 'Payroll', 'Time & Attendance', 'Benefits', 'Reports'],
+  'customer-relationship-management': ['Dashboard', 'Contacts', 'Opportunities', 'Sales', 'Service', 'Analytics'],
+  'project-management': ['Dashboard', 'Projects', 'Resources', 'Timeline', 'Budget', 'Reports'],
+  'asset-management': ['Dashboard', 'Assets', 'Maintenance', 'Tracking', 'Lifecycle', 'Reports'],
+  'quality-management': ['Dashboard', 'Inspections', 'Non-Conformance', 'CAPA', 'Audits', 'Reports'],
+  'business-intelligence-and-analytics': ['Dashboards', 'Reports', 'Data Explorer', 'Visualizations', 'Insights'],
+  'specialized-modules': ['Overview', 'Compliance', 'Documents', 'Contracts', 'Energy', 'Settings'],
+  'default': ['Dashboard', 'Transactions', 'Reports', 'Analytics', 'Settings']
+};
 
 export function NavBar({ activeTab = 'Dashboard', onTabChange, onModuleSelect }: NavBarProps) {
-  const [selectedModule, setSelectedModule] = useState(modules[0]);
+  const pathname = usePathname();
   const [showModuleSelector, setShowModuleSelector] = useState(false);
+
+  // Detect current module from pathname
+  const detectCurrentModule = () => {
+    if (pathname.includes('/master-data')) return modules.find(m => m.id === 'master-data');
+    if (pathname.includes('/finance')) return modules.find(m => m.id === 'finance');
+    if (pathname.includes('/scm') || pathname.includes('/supply-chain')) return modules.find(m => m.id === 'scm');
+    if (pathname.includes('/manufacturing')) return modules.find(m => m.id === 'manufacturing');
+    if (pathname.includes('/hr')) return modules.find(m => m.id === 'hr');
+    if (pathname.includes('/crm')) return modules.find(m => m.id === 'crm');
+    if (pathname.includes('/project')) return modules.find(m => m.id === 'projects');
+    if (pathname.includes('/asset')) return modules.find(m => m.id === 'assets');
+    if (pathname.includes('/quality')) return modules.find(m => m.id === 'quality');
+    if (pathname.includes('/analytics')) return modules.find(m => m.id === 'analytics');
+    if (pathname.includes('/specialized')) return modules.find(m => m.id === 'specialized');
+    return modules[0]; // Default to master-data
+  };
+
+  const [selectedModule, setSelectedModule] = useState(detectCurrentModule());
+
+  // Update selected module when pathname changes
+  useEffect(() => {
+    setSelectedModule(detectCurrentModule());
+  }, [pathname]);
+
+  // Get tabs for current module
+  const currentTabs = moduleTabsConfig[selectedModule?.moduleKey || 'default'] || moduleTabsConfig['default'];
 
   return (
     <div className="nav-bar">
@@ -42,8 +77,8 @@ export function NavBar({ activeTab = 'Dashboard', onTabChange, onModuleSelect }:
           className="module-selector"
           onClick={() => setShowModuleSelector(!showModuleSelector)}
         >
-          <span>{selectedModule.icon}</span>
-          <span>{selectedModule.name}</span>
+          <span>{selectedModule?.icon || '📋'}</span>
+          <span>{selectedModule?.name || 'Select Module'}</span>
           <ChevronDown className="w-4 h-4" />
         </div>
         
@@ -56,7 +91,7 @@ export function NavBar({ activeTab = 'Dashboard', onTabChange, onModuleSelect }:
               <div
                 key={module.id}
                 className={`px-4 py-2.5 hover:bg-gray-50 cursor-pointer flex items-center gap-3 text-gray-700 transition-colors ${
-                  selectedModule.id === module.id ? 'bg-blue-50 text-blue-700' : ''
+                  selectedModule?.id === module.id ? 'bg-blue-50 text-blue-700' : ''
                 }`}
                 onClick={() => {
                   setSelectedModule(module);
@@ -72,7 +107,7 @@ export function NavBar({ activeTab = 'Dashboard', onTabChange, onModuleSelect }:
         )}
       </div>
       
-      {tabs.map((tab) => (
+      {currentTabs.map((tab) => (
         <div
           key={tab}
           className={`nav-item ${activeTab === tab ? 'active' : ''}`}

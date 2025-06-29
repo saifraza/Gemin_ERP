@@ -6,14 +6,16 @@ import { useAuthStore } from '@/stores/auth';
 import { TopHeader } from '@/components/layout/top-header';
 import { NavBar } from '@/components/layout/nav-bar';
 import { Sidebar } from '@/components/layout/sidebar';
+import { PageAssistant } from '@/components/ai/page-assistant';
 import { useState, useEffect } from 'react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
   selectedModule?: string;
+  aiAssistantData?: any; // Page-specific data for AI assistant
 }
 
-export function DashboardLayout({ children, selectedModule: propSelectedModule }: DashboardLayoutProps) {
+export function DashboardLayout({ children, selectedModule: propSelectedModule, aiAssistantData }: DashboardLayoutProps) {
   const { user, companyName } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [sidebarItem, setSidebarItem] = useState('dashboard');
@@ -74,6 +76,9 @@ export function DashboardLayout({ children, selectedModule: propSelectedModule }
         <div>© 2024 {companyName || 'MSPIL'} | ERP System v3.2.4</div>
         <div>Last Update: {new Date().toLocaleTimeString()} | User: {user?.username || 'Guest'} | Role: {user?.role || 'N/A'}</div>
       </div>
+      
+      {/* Page-specific AI Assistant */}
+      <PageAssistant customData={aiAssistantData} />
     </div>
   );
 }
