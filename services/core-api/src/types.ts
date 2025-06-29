@@ -1,5 +1,4 @@
-import pkg from '@prisma/client';
-type PrismaClient = InstanceType<typeof pkg.PrismaClient>;
+import type { PrismaClient } from '@prisma/client';
 
 export interface HonoEnv {
   Variables: {

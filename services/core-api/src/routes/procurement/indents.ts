@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-import pkg from '@prisma/client';
-const { IndentPriority, IndentStatus } = pkg;
+import * as PrismaClient from '@prisma/client';
+const IndentPriority = PrismaClient.IndentPriority;
+const IndentStatus = PrismaClient.IndentStatus;
 
 const indents = new Hono();
 

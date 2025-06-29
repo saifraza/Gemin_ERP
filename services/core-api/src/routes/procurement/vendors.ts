@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-import pkg from '@prisma/client';
-const { VendorStatus } = pkg;
+import * as PrismaClient from '@prisma/client';
+const VendorStatus = PrismaClient.VendorStatus;
 
 const vendors = new Hono();
 
