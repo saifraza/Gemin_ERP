@@ -172,7 +172,7 @@ const fetchFactories = async (params: PaginationParams) => {
 };
 
 // Hooks
-export const useCompanies = (params: PaginationParams = {}) => {
+export const useCompanies = (params: PaginationParams = {}, options?: any) => {
   return useInfiniteQuery({
     queryKey: ['companies', params],
     queryFn: ({ pageParam }) => fetchCompanies({ ...params, page: pageParam as number }),
@@ -182,10 +182,11 @@ export const useCompanies = (params: PaginationParams = {}) => {
       return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    ...options,
   });
 };
 
-export const useUsers = (params: PaginationParams = {}) => {
+export const useUsers = (params: PaginationParams = {}, options?: any) => {
   return useInfiniteQuery({
     queryKey: ['users', params],
     queryFn: ({ pageParam }) => fetchUsers({ ...params, page: pageParam as number }),
@@ -194,10 +195,11 @@ export const useUsers = (params: PaginationParams = {}) => {
       return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000,
+    ...options,
   });
 };
 
-export const useFactories = (params: PaginationParams = {}) => {
+export const useFactories = (params: PaginationParams = {}, options?: any) => {
   return useInfiniteQuery({
     queryKey: ['factories', params],
     queryFn: ({ pageParam }) => fetchFactories({ ...params, page: pageParam as number }),
@@ -206,6 +208,7 @@ export const useFactories = (params: PaginationParams = {}) => {
       return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000,
+    ...options,
   });
 };
 

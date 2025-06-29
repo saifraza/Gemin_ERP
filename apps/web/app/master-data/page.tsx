@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Plus, 
   Search, 
@@ -66,10 +66,17 @@ TabButton.displayName = 'TabButton';
 
 function MasterDataContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'companies');
+  const [activeTab, setActiveTab] = useState<string>(tabFromUrl || 'companies');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+    router.push(`/master-data?tab=${tab}`);
+  }, [router]);
 
   // Debounce search input
   const debounceTimer = useRef<NodeJS.Timeout>();
@@ -81,7 +88,7 @@ function MasterDataContent() {
     }, 300);
   }, []);
 
-  // Data fetching with infinite scroll
+  // Data fetching with infinite scroll - only fetch active tab data
   const {
     data: companiesData,
     fetchNextPage: fetchNextCompanies,
@@ -89,7 +96,7 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingCompanies,
     refetch: refetchCompanies,
     isLoading: loadingCompanies,
-  } = useCompanies({ search: debouncedSearch });
+  } = useCompanies({ search: debouncedSearch }, { enabled: activeTab === 'companies' });
 
   const {
     data: usersData,
@@ -98,7 +105,7 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingUsers,
     refetch: refetchUsers,
     isLoading: loadingUsers,
-  } = useUsers({ search: debouncedSearch });
+  } = useUsers({ search: debouncedSearch }, { enabled: activeTab === 'users' });
 
   const {
     data: factoriesData,
@@ -107,7 +114,7 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingFactories,
     refetch: refetchFactories,
     isLoading: loadingFactories,
-  } = useFactories({ search: debouncedSearch });
+  } = useFactories({ search: debouncedSearch }, { enabled: activeTab === 'factories' });
 
   // Flatten paginated data
   const companies = companiesData?.pages.flatMap((page: any) => page.data) || [];
@@ -274,21 +281,21 @@ function MasterDataContent() {
         <div className="flex items-center gap-2 mb-6">
           <TabButton
             isActive={activeTab === 'companies'}
-            onClick={() => setActiveTab('companies')}
+            onClick={() => handleTabChange('companies')}
             icon={<Building2 className="w-4 h-4" />}
             label="Companies"
             count={(companiesData?.pages?.[0] as any)?.pagination?.total}
           />
           <TabButton
             isActive={activeTab === 'users'}
-            onClick={() => setActiveTab('users')}
+            onClick={() => handleTabChange('users')}
             icon={<Users className="w-4 h-4" />}
             label="Users"
             count={(usersData?.pages?.[0] as any)?.pagination?.total}
           />
           <TabButton
             isActive={activeTab === 'factories'}
-            onClick={() => setActiveTab('factories')}
+            onClick={() => handleTabChange('factories')}
             icon={<Factory className="w-4 h-4" />}
             label="Business Units"
             count={(factoriesData?.pages?.[0] as any)?.pagination?.total}
@@ -341,33 +348,60 @@ function MasterDataContent() {
         {/* Data Table */}
         <Card className="overflow-hidden">
           {activeTab === 'companies' && (
-            <DataTable
-              data={companies}
-              columns={companyColumns}
-              onLoadMore={() => fetchNextCompanies()}
-              isLoading={isFetchingCompanies}
-              hasMore={hasMoreCompanies}
-            />
+            <div>
+              {loadingCompanies && companies.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">Loading companies...</div>
+                </div>
+              ) : (
+                <DataTable
+                  key={`companies-table-${companies.length}`}
+                  data={companies}
+                  columns={companyColumns}
+                  onLoadMore={() => fetchNextCompanies()}
+                  isLoading={isFetchingCompanies}
+                  hasMore={hasMoreCompanies}
+                />
+              )}
+            </div>
           )}
           
           {activeTab === 'users' && (
-            <DataTable
-              data={users}
-              columns={userColumns}
-              onLoadMore={() => fetchNextUsers()}
-              isLoading={isFetchingUsers}
-              hasMore={hasMoreUsers}
-            />
+            <div>
+              {loadingUsers && users.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">Loading users...</div>
+                </div>
+              ) : (
+                <DataTable
+                  key={`users-table-${users.length}`}
+                  data={users}
+                  columns={userColumns}
+                  onLoadMore={() => fetchNextUsers()}
+                  isLoading={isFetchingUsers}
+                  hasMore={hasMoreUsers}
+                />
+              )}
+            </div>
           )}
           
           {activeTab === 'factories' && (
-            <DataTable
-              data={factories}
-              columns={factoryColumns}
-              onLoadMore={() => fetchNextFactories()}
-              isLoading={isFetchingFactories}
-              hasMore={hasMoreFactories}
-            />
+            <div>
+              {loadingFactories && factories.length === 0 ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="text-gray-500">Loading business units...</div>
+                </div>
+              ) : (
+                <DataTable
+                  key={`factories-table-${factories.length}`}
+                  data={factories}
+                  columns={factoryColumns}
+                  onLoadMore={() => fetchNextFactories()}
+                  isLoading={isFetchingFactories}
+                  hasMore={hasMoreFactories}
+                />
+              )}
+            </div>
           )}
         </Card>
       </div>
