@@ -32,6 +32,7 @@ import {
   useDivisions,
   useCreateDivision,
 } from '@/hooks/use-master-data';
+import { usePrefetchMasterData } from '@/hooks/use-prefetch-data';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -128,7 +129,7 @@ const indianStates = [
 ];
 
 // Division types by business unit type
-const divisionTypesByBusiness = {
+const divisionTypesByBusiness: Record<string, Array<{value: string; label: string; code: string}>> = {
   'SUGAR_ONLY': [
     { value: 'MILLING', label: 'Milling', code: 'MIL' },
     { value: 'BOILING', label: 'Boiling House', code: 'BOI' },
@@ -187,6 +188,9 @@ function MasterDataContent() {
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string | null>(null);
   const [createMode, setCreateMode] = useState<'single' | 'bulk'>('single');
   const [bulkData, setBulkData] = useState<any[]>([]);
+  
+  // Prefetch master data to ensure data is ready
+  usePrefetchMasterData();
 
   // Update activeTab when URL changes
   useEffect(() => {
@@ -212,7 +216,14 @@ function MasterDataContent() {
     }, 300);
   }, []);
 
-  // Data fetching with infinite scroll - only fetch active tab data
+  // Smart data fetching - prefetch required data
+  const [dataFetched, setDataFetched] = useState({
+    companies: false,
+    users: false,
+    factories: false
+  });
+
+  // Always fetch companies data as it's needed for dropdowns
   const {
     data: companiesData,
     fetchNextPage: fetchNextCompanies,
@@ -220,7 +231,10 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingCompanies,
     refetch: refetchCompanies,
     isLoading: loadingCompanies,
-  } = useCompanies({ search: debouncedSearch }, { enabled: activeTab === 'companies' });
+  } = useCompanies({ search: debouncedSearch }, { 
+    enabled: true, // Always enabled for dropdown dependencies
+    onSuccess: () => setDataFetched(prev => ({ ...prev, companies: true }))
+  });
 
   const {
     data: usersData,
@@ -229,7 +243,10 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingUsers,
     refetch: refetchUsers,
     isLoading: loadingUsers,
-  } = useUsers({ search: debouncedSearch }, { enabled: activeTab === 'users' });
+  } = useUsers({ search: debouncedSearch }, { 
+    enabled: activeTab === 'users' || !dataFetched.users,
+    onSuccess: () => setDataFetched(prev => ({ ...prev, users: true }))
+  });
 
   const {
     data: factoriesData,
@@ -238,7 +255,10 @@ function MasterDataContent() {
     isFetchingNextPage: isFetchingFactories,
     refetch: refetchFactories,
     isLoading: loadingFactories,
-  } = useFactories({ search: debouncedSearch }, { enabled: activeTab === 'factories' });
+  } = useFactories({ search: debouncedSearch }, { 
+    enabled: activeTab === 'factories' || activeTab === 'divisions' || !dataFetched.factories,
+    onSuccess: () => setDataFetched(prev => ({ ...prev, factories: true }))
+  });
 
   // Flatten paginated data
   const companies = companiesData?.pages.flatMap((page: any) => page.data) || [];
@@ -513,6 +533,21 @@ function MasterDataContent() {
     }
   };
 
+  // Refresh all data
+  const refreshAllData = useCallback(async () => {
+    try {
+      toast.info('Refreshing all data...');
+      await Promise.all([
+        refetchCompanies(),
+        refetchUsers(), 
+        refetchFactories()
+      ]);
+      toast.success('All data refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh some data');
+    }
+  }, [refetchCompanies, refetchUsers, refetchFactories]);
+
   // Export functionality
   const handleExport = useCallback(async () => {
     try {
@@ -744,7 +779,9 @@ function MasterDataContent() {
               onClick={() => {
                 if (activeTab === 'companies') refetchCompanies();
                 else if (activeTab === 'users') refetchUsers();
-                else refetchFactories();
+                else if (activeTab === 'factories') refetchFactories();
+                else if (activeTab === 'divisions') refreshAllData();
+                else refreshAllData();
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />

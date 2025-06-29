@@ -16,6 +16,7 @@ import { KeyboardShortcuts } from '@/components/keyboard-shortcuts';
 import { HQDashboard } from '@/components/dashboard/hq-dashboard';
 import { FactoryDashboard } from '@/components/dashboard/factory-dashboard';
 import { AIChat } from '@/components/ai-chat';
+import { usePrefetchMasterData, useMasterDataSummary } from '@/hooks/use-prefetch-data';
 
 // Sample data
 const transactionData = [
@@ -107,6 +108,10 @@ export default function DashboardPage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [notification, setNotification] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Prefetch master data for dashboard
+  usePrefetchMasterData();
+  const { companiesCount, usersCount, factoriesCount } = useMasterDataSummary();
 
   useEffect(() => {
     // Check authentication on mount
@@ -270,6 +275,28 @@ export default function DashboardPage() {
               value="89.3%"
               trend={{ direction: 'up', value: '3.7% optimized' }}
             />
+          </div>
+          
+          {/* Master Data Summary */}
+          <div className="mb-5">
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Master Data Overview</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <KPICard
+                label="Companies"
+                value={companiesCount.toString()}
+                trend={{ direction: 'neutral', value: 'Active entities' }}
+              />
+              <KPICard
+                label="Users"
+                value={usersCount.toString()}
+                trend={{ direction: 'neutral', value: 'System users' }}
+              />
+              <KPICard
+                label="Business Units"
+                value={factoriesCount.toString()}
+                trend={{ direction: 'neutral', value: 'Operating units' }}
+              />
+            </div>
           </div>
           
           <div className="grid grid-cols-1 gap-5">
