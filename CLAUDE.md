@@ -29,11 +29,11 @@
 
 ## Railway Deployment Rules
 
-### IMPORTANT: Never hardcode URLs or ports
-1. **Always use environment variables** - Railway provides all service URLs through environment variables
-2. **Never hardcode ports** - Railway uses dynamic port assignment
-3. **Never hardcode service URLs** - Use `process.env.CORE_API_URL`, `process.env.MCP_ORCHESTRATOR_URL`, etc.
-4. **No fallback localhost URLs with ports** - Don't do `|| 'http://localhost:3000'`
+### IMPORTANT: Use Railway Environment Variables
+1. **Always use environment variables** - Set service URLs in Railway dashboard
+2. **Railway handles internal URLs** - Just set `CORE_API_URL=http://core-api:8080`
+3. **Don't hardcode Railway URLs** - Let Railway manage the internal networking
+4. **Localhost fallbacks are OK** - Use `|| 'http://localhost:3000'` for local dev
 
 ### Railway Internal Networking
 - Railway uses IPv6 for internal networking
@@ -47,18 +47,18 @@
 ### Example (CORRECT):
 ```javascript
 const services = {
-  core: ensureProtocol(process.env.CORE_API_URL),
-  mcp: ensureProtocol(process.env.MCP_ORCHESTRATOR_URL),
-  eventProcessor: ensureProtocol(process.env.EVENT_PROCESSOR_URL),
+  core: process.env.CORE_API_URL || 'http://localhost:3001',
+  mcp: process.env.MCP_ORCHESTRATOR_URL || 'http://localhost:3000',
+  eventProcessor: process.env.EVENT_PROCESSOR_URL || 'http://localhost:3006',
 };
 ```
 
 ### Example (WRONG):
 ```javascript
-// DON'T DO THIS!
+// DON'T DO THIS - Don't hardcode Railway URLs!
 const services = {
-  core: process.env.CORE_API_URL || 'http://localhost:3001',
-  mcp: process.env.MCP_ORCHESTRATOR_URL || 'http://localhost:3000',
+  core: process.env.RAILWAY_ENVIRONMENT ? 'http://core-api.railway.internal:8080' : 'http://localhost:3001',
+  mcp: process.env.RAILWAY_ENVIRONMENT ? 'http://mcp-orchestrator.railway.internal:8080' : 'http://localhost:3000',
 };
 ```
 
