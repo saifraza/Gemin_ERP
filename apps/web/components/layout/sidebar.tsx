@@ -275,7 +275,7 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, selectedModule 
     items: [
       { id: 'companies', label: 'Companies', href: '/master-data?tab=companies', icon: <Building2 size={18} /> },
       { id: 'users', label: 'Users', href: '/master-data?tab=users', icon: <Users size={18} /> },
-      { id: 'factories', label: 'Factories', href: '/master-data?tab=factories', icon: <Factory size={18} /> },
+      { id: 'business', label: 'Business Units', href: '/master-data?tab=factories', icon: <Factory size={18} /> },
       { id: 'divisions', label: 'Divisions', href: '/master-data?tab=divisions', icon: <Network size={18} /> },
       { id: 'access-control', label: 'Access Control', href: '/master-data?tab=access', icon: <Shield size={18} /> },
     ]

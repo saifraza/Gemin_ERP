@@ -4,11 +4,35 @@ import { useState, useEffect, Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Trash2, Edit, Building2, Users, Factory, Plus, X } from 'lucide-react';
+import { Trash2, Edit, Building2, Users, Factory, Plus, X, Copy } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Business types with their specific fields
+const businessTypes = [
+  { value: 'MANUFACTURING', label: 'Manufacturing', hasCapacity: true },
+  { value: 'RETAIL', label: 'Retail', hasStoreSize: true },
+  { value: 'SERVICES', label: 'Services', hasServiceTypes: true },
+  { value: 'TECHNOLOGY', label: 'Technology', hasTechStack: true },
+  { value: 'HEALTHCARE', label: 'Healthcare', hasBeds: true },
+  { value: 'EDUCATION', label: 'Education', hasStudentCapacity: true },
+  { value: 'HOSPITALITY', label: 'Hospitality', hasRooms: true },
+  { value: 'CONSTRUCTION', label: 'Construction', hasProjectTypes: true },
+  { value: 'LOGISTICS', label: 'Logistics', hasFleetSize: true },
+  { value: 'FINANCE', label: 'Finance & Banking', hasAssets: true },
+  { value: 'ENERGY', label: 'Energy & Utilities', hasPowerCapacity: true },
+  { value: 'AGRICULTURE', label: 'Agriculture', hasLandSize: true },
+  { value: 'REAL_ESTATE', label: 'Real Estate', hasProperties: true },
+  { value: 'MEDIA', label: 'Media & Entertainment', hasContent: true },
+  { value: 'TELECOM', label: 'Telecommunications', hasSubscribers: true },
+  { value: 'AUTOMOTIVE', label: 'Automotive', hasProductionCapacity: true },
+  { value: 'PHARMACEUTICAL', label: 'Pharmaceutical', hasProducts: true },
+  { value: 'FOOD_BEVERAGE', label: 'Food & Beverage', hasProduction: true },
+  { value: 'TEXTILE', label: 'Textile & Apparel', hasProduction: true },
+  { value: 'CONSULTING', label: 'Consulting', hasConsultants: true },
+];
 
 function MasterDataContent() {
   const searchParams = useSearchParams();
@@ -20,6 +44,14 @@ function MasterDataContent() {
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'companies');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+  
+  // Generate business code
+  const generateBusinessCode = (type: string) => {
+    const prefix = type.substring(0, 3).toUpperCase();
+    const timestamp = Date.now().toString().slice(-4);
+    const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    return `${prefix}-${timestamp}-${random}`;
+  };
   
   // Add form states
   const [showAddForm, setShowAddForm] = useState(false);
@@ -41,17 +73,19 @@ function MasterDataContent() {
     userRole: 'VIEWER',
     userCompanyId: '',
     
-    // Factory form
+    // Business form
     factoryName: '',
-    factoryCode: '',
-    factoryType: 'INTEGRATED',
+    factoryCode: generateBusinessCode('MANUFACTURING'),
+    factoryType: 'MANUFACTURING',
     factoryCompanyId: '',
     factoryCity: '',
     factoryState: '',
     factoryAddress: '',
-    factorySugarCapacity: '',
-    factoryEthanolCapacity: '',
-    factoryPowerCapacity: '',
+    // Dynamic capacity fields
+    factoryCapacity: '',
+    factoryStoreSize: '',
+    factoryEmployees: '',
+    factorySpecialty: '',
   });
   
   useEffect(() => {
@@ -63,6 +97,31 @@ function MasterDataContent() {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Handle business type change
+  const handleBusinessTypeChange = (type: string) => {
+    setAddFormData({
+      ...addFormData,
+      factoryType: type,
+      factoryCode: generateBusinessCode(type)
+    });
+  };
+
+  // Copy company address to business
+  const copyCompanyAddress = () => {
+    const selectedCompany = companies.find(c => c.id === addFormData.factoryCompanyId);
+    if (selectedCompany) {
+      setAddFormData({
+        ...addFormData,
+        factoryAddress: selectedCompany.address || '',
+        factoryCity: selectedCompany.city || addFormData.factoryCity,
+        factoryState: selectedCompany.state || addFormData.factoryState,
+      });
+      toast.success('Company address copied');
+    } else {
+      toast.error('Please select a company first');
+    }
+  };
 
   const getAuthHeaders = (): HeadersInit => {
     const token = localStorage.getItem('auth_token');
@@ -294,6 +353,25 @@ function MasterDataContent() {
 
   const createFactory = async () => {
     try {
+      // Build capacity object based on business type
+      const capacity: any = {};
+      const businessType = businessTypes.find(t => t.value === addFormData.factoryType);
+      
+      if (businessType) {
+        if (businessType.hasCapacity || businessType.hasProductionCapacity || businessType.hasPowerCapacity) {
+          capacity.main = addFormData.factoryCapacity;
+        }
+        if (businessType.hasStoreSize) {
+          capacity.storeSize = addFormData.factoryStoreSize;
+        }
+        if (businessType.hasBeds || businessType.hasRooms || businessType.hasFleetSize) {
+          capacity.units = addFormData.factoryCapacity;
+        }
+        if (addFormData.factoryEmployees) {
+          capacity.employees = parseInt(addFormData.factoryEmployees);
+        }
+      }
+      
       const res = await fetch(`${API_URL}/api/factories`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -307,25 +385,21 @@ function MasterDataContent() {
             state: addFormData.factoryState,
             address: addFormData.factoryAddress,
           },
-          capacity: {
-            sugar: addFormData.factorySugarCapacity ? parseInt(addFormData.factorySugarCapacity) : null,
-            ethanol: addFormData.factoryEthanolCapacity ? parseInt(addFormData.factoryEthanolCapacity) : null,
-            power: addFormData.factoryPowerCapacity ? parseInt(addFormData.factoryPowerCapacity) : null,
-          }
+          capacity: capacity
         })
       });
 
       if (res.ok) {
-        toast.success('Factory created successfully');
+        toast.success('Business unit created successfully');
         setShowAddForm(false);
         resetAddForm();
         loadAllData();
       } else {
         const error = await res.json();
-        toast.error(error.error || 'Failed to create factory');
+        toast.error(error.error || 'Failed to create business unit');
       }
     } catch (error) {
-      toast.error('Error creating factory');
+      toast.error('Error creating business unit');
     }
   };
 
@@ -345,15 +419,16 @@ function MasterDataContent() {
       userRole: 'VIEWER',
       userCompanyId: '',
       factoryName: '',
-      factoryCode: '',
-      factoryType: 'INTEGRATED',
+      factoryCode: generateBusinessCode('MANUFACTURING'),
+      factoryType: 'MANUFACTURING',
       factoryCompanyId: '',
       factoryCity: '',
       factoryState: '',
       factoryAddress: '',
-      factorySugarCapacity: '',
-      factoryEthanolCapacity: '',
-      factoryPowerCapacity: '',
+      factoryCapacity: '',
+      factoryStoreSize: '',
+      factoryEmployees: '',
+      factorySpecialty: '',
     });
   };
 
@@ -798,11 +873,11 @@ function MasterDataContent() {
           </Card>
         )}
 
-        {/* Factories Tab */}
+        {/* Business Tab */}
         {activeTab === 'factories' && (
           <Card className="p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Factories</h2>
+              <h2 className="text-xl font-semibold">Business Units</h2>
               <Button
                 onClick={() => {
                   setShowAddForm(true);
@@ -811,45 +886,45 @@ function MasterDataContent() {
                 className="gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add Factory
+                Add Business
               </Button>
             </div>
             
             {showAddForm && (
               <div className="mb-6 border rounded-lg p-4 bg-gray-50">
-                <h3 className="font-semibold mb-4">Create New Factory</h3>
+                <h3 className="font-semibold mb-4">Create New Business Unit</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Factory Name *</label>
+                    <label className="block text-sm font-medium mb-1">Business Name *</label>
                     <input
                       type="text"
                       value={addFormData.factoryName}
                       onChange={(e) => setAddFormData({...addFormData, factoryName: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
-                      placeholder="Enter factory name"
+                      placeholder="Enter business name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Factory Code *</label>
+                    <label className="block text-sm font-medium mb-1">Business Code</label>
                     <input
                       type="text"
                       value={addFormData.factoryCode}
                       onChange={(e) => setAddFormData({...addFormData, factoryCode: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="e.g., FAC001"
+                      className="w-full px-3 py-2 border rounded-md bg-gray-100"
+                      placeholder="Auto-generated"
+                      readOnly
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Factory Type *</label>
+                    <label className="block text-sm font-medium mb-1">Business Type *</label>
                     <select
                       value={addFormData.factoryType}
-                      onChange={(e) => setAddFormData({...addFormData, factoryType: e.target.value})}
+                      onChange={(e) => handleBusinessTypeChange(e.target.value)}
                       className="w-full px-3 py-2 border rounded-md"
                     >
-                      <option value="INTEGRATED">Integrated</option>
-                      <option value="SUGAR_ONLY">Sugar Only</option>
-                      <option value="DISTILLERY">Distillery</option>
-                      <option value="COGEN">Co-generation</option>
+                      {businessTypes.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -886,52 +961,122 @@ function MasterDataContent() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1">Address</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium">Address</label>
+                      <button
+                        type="button"
+                        onClick={copyCompanyAddress}
+                        className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                      >
+                        <Copy className="w-3 h-3" />
+                        Copy from Company
+                      </button>
+                    </div>
                     <textarea
                       value={addFormData.factoryAddress}
                       onChange={(e) => setAddFormData({...addFormData, factoryAddress: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
                       rows={2}
-                      placeholder="Factory address"
+                      placeholder="Business address"
                     />
                   </div>
+                  
+                  {/* Dynamic fields based on business type */}
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasCapacity && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Production Capacity</label>
+                      <input
+                        type="text"
+                        value={addFormData.factoryCapacity}
+                        onChange={(e) => setAddFormData({...addFormData, factoryCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 10000 units/month"
+                      />
+                    </div>
+                  )}
+                  
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasStoreSize && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Store Size (sq ft)</label>
+                      <input
+                        type="number"
+                        value={addFormData.factoryStoreSize}
+                        onChange={(e) => setAddFormData({...addFormData, factoryStoreSize: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 5000"
+                      />
+                    </div>
+                  )}
+                  
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasBeds && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Number of Beds</label>
+                      <input
+                        type="number"
+                        value={addFormData.factoryCapacity}
+                        onChange={(e) => setAddFormData({...addFormData, factoryCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 200"
+                      />
+                    </div>
+                  )}
+                  
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasRooms && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Number of Rooms</label>
+                      <input
+                        type="number"
+                        value={addFormData.factoryCapacity}
+                        onChange={(e) => setAddFormData({...addFormData, factoryCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 150"
+                      />
+                    </div>
+                  )}
+                  
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasFleetSize && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Fleet Size</label>
+                      <input
+                        type="number"
+                        value={addFormData.factoryCapacity}
+                        onChange={(e) => setAddFormData({...addFormData, factoryCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 50 vehicles"
+                      />
+                    </div>
+                  )}
+                  
+                  {businessTypes.find(t => t.value === addFormData.factoryType)?.hasPowerCapacity && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Power Capacity (MW)</label>
+                      <input
+                        type="number"
+                        value={addFormData.factoryCapacity}
+                        onChange={(e) => setAddFormData({...addFormData, factoryCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border rounded-md"
+                        placeholder="e.g., 100"
+                      />
+                    </div>
+                  )}
+                  
                   <div>
-                    <label className="block text-sm font-medium mb-1">Sugar Capacity (TCD)</label>
+                    <label className="block text-sm font-medium mb-1">Number of Employees</label>
                     <input
                       type="number"
-                      value={addFormData.factorySugarCapacity}
-                      onChange={(e) => setAddFormData({...addFormData, factorySugarCapacity: e.target.value})}
+                      value={addFormData.factoryEmployees}
+                      onChange={(e) => setAddFormData({...addFormData, factoryEmployees: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
-                      placeholder="e.g., 10000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Ethanol Capacity (KLPD)</label>
-                    <input
-                      type="number"
-                      value={addFormData.factoryEthanolCapacity}
-                      onChange={(e) => setAddFormData({...addFormData, factoryEthanolCapacity: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="e.g., 150"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Power Capacity (MW)</label>
-                    <input
-                      type="number"
-                      value={addFormData.factoryPowerCapacity}
-                      onChange={(e) => setAddFormData({...addFormData, factoryPowerCapacity: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md"
-                      placeholder="e.g., 35"
+                      placeholder="e.g., 250"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button
                     onClick={createFactory}
-                    disabled={!addFormData.factoryName || !addFormData.factoryCode || !addFormData.factoryCity || !addFormData.factoryState}
+                    disabled={!addFormData.factoryName || !addFormData.factoryCity || !addFormData.factoryState}
                   >
-                    Create Factory
+                    Create Business
                   </Button>
                   <Button
                     variant="outline"
@@ -947,7 +1092,7 @@ function MasterDataContent() {
             )}
             
             {factories.length === 0 ? (
-              <p className="text-gray-500">No factories found</p>
+              <p className="text-gray-500">No business units found</p>
             ) : (
               <div className="grid gap-4">
                 {factories.map((factory) => (
@@ -955,16 +1100,15 @@ function MasterDataContent() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{factory.name}</h3>
                       <p className="text-sm text-gray-600">Code: {factory.code}</p>
-                      <p className="text-sm text-gray-600">Type: {factory.type}</p>
+                      <p className="text-sm text-gray-600">Type: {businessTypes.find(t => t.value === factory.type)?.label || factory.type}</p>
                       <p className="text-sm text-gray-600">
                         Location: {factory.location?.city}, {factory.location?.state}
                       </p>
                       {factory.capacity && (
                         <div className="mt-2 text-sm text-gray-600">
-                          Capacity: 
-                          {factory.capacity.sugar && ` Sugar: ${factory.capacity.sugar} TCD,`}
-                          {factory.capacity.ethanol && ` Ethanol: ${factory.capacity.ethanol} KLPD,`}
-                          {factory.capacity.power && ` Power: ${factory.capacity.power} MW`}
+                          {Object.entries(factory.capacity).map(([key, value]) => 
+                            value ? `${key}: ${value} ` : ''
+                          ).filter(Boolean).join(', ')}
                         </div>
                       )}
                     </div>
