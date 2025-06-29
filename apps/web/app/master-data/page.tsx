@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, memo, useRef } from 'react';
+import { Suspense, useState, useCallback, memo, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -64,7 +64,7 @@ const TabButton = memo(({
 
 TabButton.displayName = 'TabButton';
 
-export default function OptimizedMasterDataPage() {
+function MasterDataContent() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'companies');
@@ -372,5 +372,21 @@ export default function OptimizedMasterDataPage() {
         </Card>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function OptimizedMasterDataPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <MasterDataContent />
+    </Suspense>
   );
 }

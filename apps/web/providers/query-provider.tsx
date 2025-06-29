@@ -18,8 +18,6 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             retry: 3,
             // Refetch on window focus
             refetchOnWindowFocus: true,
-            // Show previous data while fetching new data
-            keepPreviousData: true,
           },
         },
       })

@@ -87,11 +87,11 @@ const fetchCompanies = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(responseData) ? responseData : [],
+    data: Array.isArray(data) ? data : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
+      total: Array.isArray(data) ? data.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -123,11 +123,11 @@ const fetchUsers = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(responseData) ? responseData : [],
+    data: Array.isArray(data) ? data : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
+      total: Array.isArray(data) ? data.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -159,11 +159,11 @@ const fetchFactories = async (params: PaginationParams) => {
   
   // Legacy format - convert to paginated format
   return {
-    data: Array.isArray(responseData) ? responseData : [],
+    data: Array.isArray(data) ? data : [],
     pagination: {
       page: params.page || 1,
       limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
+      total: Array.isArray(data) ? data.length : 0,
       totalPages: 1,
       hasMore: false,
       nextPage: null,
@@ -175,10 +175,11 @@ const fetchFactories = async (params: PaginationParams) => {
 export const useCompanies = (params: PaginationParams = {}) => {
   return useInfiniteQuery({
     queryKey: ['companies', params],
-    queryFn: ({ pageParam = 1 }) => fetchCompanies({ ...params, page: pageParam }),
-    getNextPageParam: (lastPage, allPages) => {
+    queryFn: ({ pageParam }) => fetchCompanies({ ...params, page: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) => {
       // Assuming API returns { data: [], hasMore: boolean, nextPage: number }
-      return lastPage.hasMore ? lastPage.nextPage : undefined;
+      return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
@@ -187,9 +188,10 @@ export const useCompanies = (params: PaginationParams = {}) => {
 export const useUsers = (params: PaginationParams = {}) => {
   return useInfiniteQuery({
     queryKey: ['users', params],
-    queryFn: ({ pageParam = 1 }) => fetchUsers({ ...params, page: pageParam }),
-    getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? lastPage.nextPage : undefined;
+    queryFn: ({ pageParam }) => fetchUsers({ ...params, page: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) => {
+      return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000,
   });
@@ -198,9 +200,10 @@ export const useUsers = (params: PaginationParams = {}) => {
 export const useFactories = (params: PaginationParams = {}) => {
   return useInfiniteQuery({
     queryKey: ['factories', params],
-    queryFn: ({ pageParam = 1 }) => fetchFactories({ ...params, page: pageParam }),
-    getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? lastPage.nextPage : undefined;
+    queryFn: ({ pageParam }) => fetchFactories({ ...params, page: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: any) => {
+      return lastPage.pagination?.hasMore ? lastPage.pagination?.nextPage : undefined;
     },
     refetchInterval: 5 * 60 * 1000,
   });
@@ -248,25 +251,7 @@ export const useDeleteCompany = () => {
         throw new Error(error.error || 'Failed to delete company');
       }
       const data = await res.json();
-  
-  // If API returns paginated format, return as-is
-  // Otherwise, convert to expected format
-  if (data.data && data.pagination) {
-    return data;
-  }
-  
-  // Legacy format - convert to paginated format
-  return {
-    data: Array.isArray(responseData) ? responseData : [],
-    pagination: {
-      page: params.page || 1,
-      limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
-      totalPages: 1,
-      hasMore: false,
-      nextPage: null,
-    }
-  };
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
@@ -294,25 +279,7 @@ export const useCreateUser = () => {
         throw new Error(error.error || 'Failed to create user');
       }
       const responseData = await res.json();
-  
-  // If API returns paginated format, return as-is
-  // Otherwise, convert to expected format
-  if (responseData.data && responseData.pagination) {
-    return responseData;
-  }
-  
-  // Legacy format - convert to paginated format
-  return {
-    data: Array.isArray(responseData) ? responseData : [],
-    pagination: {
-      page: params.page || 1,
-      limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
-      totalPages: 1,
-      hasMore: false,
-      nextPage: null,
-    }
-  };
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -339,25 +306,7 @@ export const useCreateFactory = () => {
         throw new Error(error.error || 'Failed to create business unit');
       }
       const responseData = await res.json();
-  
-  // If API returns paginated format, return as-is
-  // Otherwise, convert to expected format
-  if (responseData.data && responseData.pagination) {
-    return responseData;
-  }
-  
-  // Legacy format - convert to paginated format
-  return {
-    data: Array.isArray(responseData) ? responseData : [],
-    pagination: {
-      page: params.page || 1,
-      limit: params.limit || 20,
-      total: Array.isArray(responseData) ? responseData.length : 0,
-      totalPages: 1,
-      hasMore: false,
-      nextPage: null,
-    }
-  };
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['factories'] });
