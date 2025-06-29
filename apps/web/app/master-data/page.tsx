@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-export default function MasterDataPage() {
+function MasterDataContent() {
   const searchParams = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [companies, setCompanies] = useState<any[]>([]);
@@ -542,5 +542,19 @@ export default function MasterDataPage() {
       </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function MasterDataPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-full">
+          <div>Loading master data...</div>
+        </div>
+      </DashboardLayout>
+    }>
+      <MasterDataContent />
+    </Suspense>
   );
 }
