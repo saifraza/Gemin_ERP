@@ -1,3 +1,5 @@
+import React from 'react';
+
 // Sample data moved from dashboard component
 export const transactionData = [
   {

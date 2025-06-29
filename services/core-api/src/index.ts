@@ -6,7 +6,7 @@ import { logger } from 'hono/logger';
 import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
 import { PostgreSQLCache } from './shared/cache/index';
-import { errorHandler } from '../../../packages/shared/src/errors/index';
+import { errorHandler } from './shared/errors/index';
 
 // Routes
 import { authRoutes } from './routes/auth';

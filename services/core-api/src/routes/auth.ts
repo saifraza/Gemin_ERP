@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { prisma, cache } from '../index';
 import { PostgreSQLSessionStore } from '../shared/cache/index';
-import { BadRequestError, UnauthorizedError, NotFoundError } from '../../../packages/shared/src/errors/index';
+import { BadRequestError, UnauthorizedError, NotFoundError } from '../shared/errors/index';
 
 const authRoutes = new Hono();
 
