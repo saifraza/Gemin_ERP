@@ -2368,12 +2368,12 @@ function AccessControlTab() {
             
             <div>
               <Label htmlFor="parent-role">Parent Role (Optional)</Label>
-              <Select value={createRoleData.parentId} onValueChange={(value) => setCreateRoleData({...createRoleData, parentId: value})}>
+              <Select value={createRoleData.parentId || 'none'} onValueChange={(value) => setCreateRoleData({...createRoleData, parentId: value === 'none' ? '' : value})}>
                 <SelectTrigger id="parent-role">
                   <SelectValue placeholder="Select parent role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {roles?.map((role: any) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name} (Level {role.level})
