@@ -127,14 +127,45 @@ const indianStates = [
   'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
-// Division types
-const divisionTypes = [
-  { value: 'SUGAR', label: 'Sugar Division', code: 'SUG' },
-  { value: 'ETHANOL', label: 'Ethanol Division', code: 'ETH' },
-  { value: 'POWER', label: 'Power Division', code: 'PWR' },
-  { value: 'FEED', label: 'Feed Division', code: 'FED' },
-  { value: 'COMMON', label: 'Common Division', code: 'CMN' }
-];
+// Division types by business unit type
+const divisionTypesByBusiness = {
+  'SUGAR_ONLY': [
+    { value: 'MILLING', label: 'Milling', code: 'MIL' },
+    { value: 'BOILING', label: 'Boiling House', code: 'BOI' },
+    { value: 'PACKING', label: 'Packing & Storage', code: 'PCK' },
+    { value: 'QUALITY', label: 'Quality Control', code: 'QC' },
+    { value: 'MAINTENANCE', label: 'Maintenance', code: 'MNT' }
+  ],
+  'DISTILLERY': [
+    { value: 'CORN_STORAGE', label: 'Corn Storage', code: 'CST' },
+    { value: 'MILLING', label: 'Milling', code: 'MIL' },
+    { value: 'FERMENTATION', label: 'Fermentation', code: 'FRM' },
+    { value: 'DISTILLATION', label: 'Distillation', code: 'DST' },
+    { value: 'EVAPORATION', label: 'Evaporation', code: 'EVP' },
+    { value: 'DDGS', label: 'DDGS Processing', code: 'DDG' },
+    { value: 'QUALITY', label: 'Quality Control', code: 'QC' }
+  ],
+  'COGEN': [
+    { value: 'BOILER', label: 'Boiler House', code: 'BLR' },
+    { value: 'TURBINE', label: 'Turbine House', code: 'TRB' },
+    { value: 'ELECTRICAL', label: 'Electrical', code: 'ELC' },
+    { value: 'WATER_TREATMENT', label: 'Water Treatment', code: 'WTP' },
+    { value: 'ASH_HANDLING', label: 'Ash Handling', code: 'ASH' }
+  ],
+  'INTEGRATED': [
+    // Sugar divisions
+    { value: 'SUGAR_MILLING', label: 'Sugar - Milling', code: 'S-MIL' },
+    { value: 'SUGAR_BOILING', label: 'Sugar - Boiling House', code: 'S-BOI' },
+    { value: 'SUGAR_PACKING', label: 'Sugar - Packing', code: 'S-PCK' },
+    // Ethanol divisions
+    { value: 'ETH_FERMENTATION', label: 'Ethanol - Fermentation', code: 'E-FRM' },
+    { value: 'ETH_DISTILLATION', label: 'Ethanol - Distillation', code: 'E-DST' },
+    // Power divisions
+    { value: 'POWER_GENERATION', label: 'Power - Generation', code: 'P-GEN' },
+    // Common
+    { value: 'COMMON', label: 'Common Services', code: 'CMN' }
+  ]
+};
 
 function MasterDataContent() {
   const searchParams = useSearchParams();
@@ -405,10 +436,22 @@ function MasterDataContent() {
           return;
         }
         
+        // Map division code to appropriate type
+        let divType = 'COMMON';
+        const code = createFormData.code;
+        if (code.startsWith('MIL') || code.startsWith('S-MIL')) divType = 'SUGAR';
+        else if (code.startsWith('BOI') || code.startsWith('S-BOI')) divType = 'SUGAR';
+        else if (code.startsWith('PCK') || code.startsWith('S-PCK')) divType = 'SUGAR';
+        else if (code.startsWith('FRM') || code.startsWith('E-FRM')) divType = 'ETHANOL';
+        else if (code.startsWith('DST') || code.startsWith('E-DST')) divType = 'ETHANOL';
+        else if (code.startsWith('CST') || code.startsWith('EVP') || code.startsWith('DDG')) divType = 'ETHANOL';
+        else if (code.startsWith('BLR') || code.startsWith('TRB') || code.startsWith('P-GEN')) divType = 'POWER';
+        else if (code.startsWith('ELC') || code.startsWith('WTP') || code.startsWith('ASH')) divType = 'POWER';
+        
         const divisionData = {
           name: createFormData.name,
           code: createFormData.code,
-          type: createFormData.type,
+          type: divType,
           factoryId: createFormData.factoryId,
           isActive: createFormData.isActive !== false
         };
@@ -832,7 +875,21 @@ function MasterDataContent() {
                   {selectedBusinessUnit && (
                     <div>
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Divisions</h3>
+                        <div>
+                          <h3 className="text-lg font-semibold">Divisions</h3>
+                          {(() => {
+                            const factory = factories.find((f: any) => f.id === selectedBusinessUnit);
+                            const typeLabel = factory?.type === 'SUGAR_ONLY' ? 'Sugar Plant' :
+                                            factory?.type === 'DISTILLERY' ? 'Ethanol Plant' :
+                                            factory?.type === 'COGEN' ? 'Power Plant' :
+                                            'Integrated Complex';
+                            return (
+                              <p className="text-sm text-gray-600 mt-1">
+                                {factory?.name} - {typeLabel}
+                              </p>
+                            );
+                          })()}
+                        </div>
                         <Button onClick={() => {
                           setCreateFormData({ factoryId: selectedBusinessUnit });
                           setShowCreateModal(true);
@@ -843,49 +900,52 @@ function MasterDataContent() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {divisionTypes.map((divType) => {
+                        {(() => {
                           const factory = factories.find((f: any) => f.id === selectedBusinessUnit);
-                          const hasDivision = factory?.divisions?.some((d: any) => d.type === divType.value);
+                          const divisionTypes = divisionTypesByBusiness[factory?.type] || divisionTypesByBusiness['INTEGRATED'];
                           
-                          return (
-                            <Card key={divType.value} className={`p-4 ${hasDivision ? 'border-green-500' : 'border-gray-200'}`}>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-medium text-lg">{divType.label}</h4>
-                                  <p className="text-sm text-gray-500">{divType.code}</p>
+                          return divisionTypes.map((divType) => {
+                            const hasDivision = factory?.divisions?.some((d: any) => d.code === divType.code);
+                            
+                            return (
+                              <Card key={divType.value} className={`p-4 ${hasDivision ? 'border-green-500' : 'border-gray-200'}`}>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="font-medium text-lg">{divType.label}</h4>
+                                    <p className="text-sm text-gray-500">Code: {divType.code}</p>
+                                  </div>
+                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                    hasDivision ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                                  }`}>
+                                    {hasDivision ? '✓' : '+'}
+                                  </div>
                                 </div>
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                  hasDivision ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                                }`}>
-                                  {hasDivision ? '✓' : '+'}
-                                </div>
-                              </div>
-                              {hasDivision ? (
-                                <div className="mt-3">
-                                  <Badge variant="default">Active</Badge>
-                                </div>
-                              ) : (
-                                <div className="mt-3">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setCreateFormData({ 
-                                        factoryId: selectedBusinessUnit,
-                                        type: divType.value,
-                                        name: divType.label,
-                                        code: divType.code
-                                      });
-                                      setShowCreateModal(true);
-                                    }}
-                                  >
-                                    Create
-                                  </Button>
-                                </div>
-                              )}
-                            </Card>
-                          );
-                        })}
+                                {hasDivision ? (
+                                  <div className="mt-3">
+                                    <Badge variant="default">Active</Badge>
+                                  </div>
+                                ) : (
+                                  <div className="mt-3">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => {
+                                        setCreateFormData({ 
+                                          factoryId: selectedBusinessUnit,
+                                          name: divType.label,
+                                          code: divType.code
+                                        });
+                                        setShowCreateModal(true);
+                                      }}
+                                    >
+                                      Create
+                                    </Button>
+                                  </div>
+                                )}
+                              </Card>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}
@@ -1361,13 +1421,15 @@ function MasterDataContent() {
                     <div>
                       <Label htmlFor="divisionType">Division Type</Label>
                       <Select 
-                        value={createFormData.type || ''} 
-                        onValueChange={(value) => {
-                          const division = divisionTypes.find(d => d.value === value);
+                        value={createFormData.code || ''} 
+                        onValueChange={(code) => {
+                          const factory = factories.find((f: any) => f.id === createFormData.factoryId);
+                          const divTypes = divisionTypesByBusiness[factory?.type] || divisionTypesByBusiness['INTEGRATED'];
+                          const division = divTypes.find(d => d.code === code);
                           if (division) {
                             setCreateFormData({ 
                               ...createFormData, 
-                              type: value,
+                              type: 'COMMON', // We'll map this to proper enum later
                               name: division.label,
                               code: division.code
                             });
@@ -1378,11 +1440,15 @@ function MasterDataContent() {
                           <SelectValue placeholder="Select division type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {divisionTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            const factory = factories.find((f: any) => f.id === createFormData.factoryId);
+                            const divTypes = divisionTypesByBusiness[factory?.type] || divisionTypesByBusiness['INTEGRATED'];
+                            return divTypes.map((type) => (
+                              <SelectItem key={type.code} value={type.code}>
+                                {type.label}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
                     </div>
