@@ -3,7 +3,17 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-const { QuotationStatus } = require('@prisma/client');
+// Import Prisma enums
+const PrismaClient = require('@prisma/client');
+const QuotationStatus = PrismaClient.QuotationStatus || {
+  DRAFT: 'DRAFT',
+  SUBMITTED: 'SUBMITTED',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+  EXPIRED: 'EXPIRED',
+  CONVERTED_TO_PO: 'CONVERTED_TO_PO'
+};
 
 const quotations = new Hono();
 

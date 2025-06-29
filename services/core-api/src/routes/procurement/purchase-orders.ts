@@ -3,7 +3,19 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-const { POStatus } = require('@prisma/client');
+// Import Prisma enums
+const PrismaClient = require('@prisma/client');
+const POStatus = PrismaClient.POStatus || {
+  DRAFT: 'DRAFT',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  SENT: 'SENT',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  PARTIALLY_RECEIVED: 'PARTIALLY_RECEIVED',
+  RECEIVED: 'RECEIVED',
+  CANCELLED: 'CANCELLED'
+};
 
 const purchaseOrders = new Hono();
 

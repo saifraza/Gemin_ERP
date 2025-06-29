@@ -3,7 +3,14 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-const { VendorStatus } = require('@prisma/client');
+// Import Prisma enums
+const PrismaClient = require('@prisma/client');
+const VendorStatus = PrismaClient.VendorStatus || {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  BLOCKED: 'BLOCKED',
+  PENDING_VERIFICATION: 'PENDING_VERIFICATION'
+};
 
 const vendors = new Hono();
 

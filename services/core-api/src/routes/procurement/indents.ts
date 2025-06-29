@@ -3,7 +3,22 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-const { IndentPriority, IndentStatus } = require('@prisma/client');
+// Import Prisma enums
+const PrismaClient = require('@prisma/client');
+const IndentPriority = PrismaClient.IndentPriority || {
+  URGENT: 'URGENT',
+  HIGH: 'HIGH',
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW'
+};
+const IndentStatus = PrismaClient.IndentStatus || {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  RFQ_CREATED: 'RFQ_CREATED',
+  PO_CREATED: 'PO_CREATED',
+  CANCELLED: 'CANCELLED'
+};
 
 const indents = new Hono();
 

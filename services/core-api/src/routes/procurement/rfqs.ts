@@ -3,7 +3,16 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-const { RFQStatus } = require('@prisma/client');
+// Import Prisma enums
+const PrismaClient = require('@prisma/client');
+const RFQStatus = PrismaClient.RFQStatus || {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  RESPONSES_RECEIVED: 'RESPONSES_RECEIVED',
+  UNDER_EVALUATION: 'UNDER_EVALUATION',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+};
 
 const rfqs = new Hono();
 
