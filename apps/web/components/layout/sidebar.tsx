@@ -27,59 +27,6 @@ const defaultSections: SidebarSection[] = [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
       { id: 'master-data', label: 'Master Data', href: '/master-data' },
     ]
-  },
-  {
-    title: 'Production',
-    items: [
-      { id: 'production-planning', label: 'Production Planning' },
-      { id: 'work-orders', label: 'Work Orders' },
-      { id: 'inventory', label: 'Inventory Management' },
-      { id: 'quality-control', label: 'Quality Control' },
-    ]
-  },
-  {
-    title: 'Sales & Distribution',
-    items: [
-      { id: 'sales-orders', label: 'Sales Orders' },
-      { id: 'customers', label: 'Customer Management' },
-      { id: 'pricing', label: 'Pricing & Discounts' },
-      { id: 'delivery', label: 'Delivery Schedule' },
-    ]
-  },
-  {
-    title: 'Procurement',
-    items: [
-      { id: 'purchase-orders', label: 'Purchase Orders' },
-      { id: 'vendors', label: 'Vendor Management' },
-      { id: 'rfq', label: 'Request for Quotation' },
-      { id: 'contracts', label: 'Contracts' },
-    ]
-  },
-  {
-    title: 'Finance',
-    items: [
-      { id: 'accounts-payable', label: 'Accounts Payable' },
-      { id: 'accounts-receivable', label: 'Accounts Receivable' },
-      { id: 'general-ledger', label: 'General Ledger' },
-      { id: 'financial-reports', label: 'Financial Reports' },
-    ]
-  },
-  {
-    title: 'Human Resources',
-    items: [
-      { id: 'employees', label: 'Employee Management' },
-      { id: 'attendance', label: 'Attendance' },
-      { id: 'payroll', label: 'Payroll' },
-      { id: 'leave-management', label: 'Leave Management' },
-    ]
-  },
-  {
-    title: 'Reports & Analytics',
-    items: [
-      { id: 'dashboards', label: 'Analytics Dashboard' },
-      { id: 'custom-reports', label: 'Custom Reports' },
-      { id: 'scheduled-reports', label: 'Scheduled Reports' },
-    ]
   }
 ];
 

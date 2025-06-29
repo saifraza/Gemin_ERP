@@ -67,24 +67,24 @@
 }
 
 .nav-bar {
-  @apply bg-[#2c5282] h-10 flex items-center px-5 shadow-md;
+  @apply bg-white h-10 flex items-center px-5 shadow-md border-b border-gray-200;
 }
 
 .module-selector {
-  @apply flex items-center gap-1 bg-white/10 px-4 py-1 rounded cursor-pointer mr-5 hover:bg-white/20 transition-colors;
+  @apply flex items-center gap-1 bg-gray-100 px-4 py-1 rounded cursor-pointer mr-5 hover:bg-gray-200 transition-colors text-gray-700;
 }
 
 .nav-item {
-  @apply px-4 h-full flex items-center text-white cursor-pointer transition-colors text-sm relative hover:bg-white/10;
+  @apply px-4 h-full flex items-center text-gray-700 cursor-pointer transition-colors text-sm relative hover:bg-gray-100;
 }
 
 .nav-item.active {
-  @apply bg-white/15;
+  @apply bg-gray-100 text-blue-600 font-medium;
 }
 
 .nav-item.active::after {
   content: '';
-  @apply absolute bottom-0 left-0 right-0 h-[3px] bg-[#f39c12];
+  @apply absolute bottom-0 left-0 right-0 h-[3px] bg-blue-600;
 }
 
 .toolbar {
