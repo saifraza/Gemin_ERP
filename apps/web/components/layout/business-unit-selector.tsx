@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth';
 import { ChevronDown, Building2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
-export function FactorySelector() {
+export function BusinessUnitSelector() {
   const { user, currentFactory, allowedFactories, switchFactory, canAccessAllFactories } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -21,7 +21,7 @@ export function FactorySelector() {
   }, []);
 
   // Debug logging (commented out for production)
-  // console.log('Factory Selector Debug:', {
+  // console.log('Business Unit Selector Debug:', {
   //   user,
   //   currentFactory,
   //   allowedFactories,
@@ -33,12 +33,12 @@ export function FactorySelector() {
   }
 
   if (!allowedFactories || allowedFactories.length === 0) {
-    return <div className="text-xs text-gray-400">No factory access</div>;
+    return <div className="text-xs text-gray-400">No business unit access</div>;
   }
 
-  const currentFactoryName = currentFactory === 'all' 
-    ? 'All Factories' 
-    : allowedFactories.find(f => f.id === currentFactory)?.name || 'Select Factory';
+  const currentBusinessName = currentFactory === 'all' 
+    ? 'All Business Units' 
+    : allowedFactories.find(f => f.id === currentFactory)?.name || 'Select Business Unit';
 
   const showSelector = canAccessAllFactories() || allowedFactories.length > 1;
 
@@ -51,7 +51,7 @@ export function FactorySelector() {
         }`}
       >
         <Building2 className="w-4 h-4" />
-        <span>{currentFactoryName}</span>
+        <span>{currentBusinessName}</span>
         {showSelector && <ChevronDown className="w-3 h-3" />}
       </button>
 
@@ -70,7 +70,7 @@ export function FactorySelector() {
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
                 <div>
-                  <div className="font-medium">All Factories</div>
+                  <div className="font-medium">All Business Units</div>
                   <div className="text-xs text-gray-400">View consolidated data</div>
                 </div>
               </div>

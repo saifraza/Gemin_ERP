@@ -110,14 +110,14 @@ function MasterDataContent() {
   // Copy company address to business
   const copyCompanyAddress = () => {
     const selectedCompany = companies.find(c => c.id === addFormData.factoryCompanyId);
-    if (selectedCompany) {
+    if (selectedCompany && selectedCompany.address) {
+      // Simply copy the full address
+      // City and State should be filled manually as they might not be parseable from address
       setAddFormData({
         ...addFormData,
-        factoryAddress: selectedCompany.address || '',
-        factoryCity: selectedCompany.city || addFormData.factoryCity,
-        factoryState: selectedCompany.state || addFormData.factoryState,
+        factoryAddress: selectedCompany.address,
       });
-      toast.success('Company address copied');
+      toast.success('Company address copied! Please fill in City and State.');
     } else {
       toast.error('Please select a company first');
     }
