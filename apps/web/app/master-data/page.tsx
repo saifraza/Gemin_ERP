@@ -248,7 +248,7 @@ function MasterDataContent() {
         }
         
         // Prepare capacity based on type
-        let capacity = { sugar: 0, ethanol: 0, power: 0, feed: 0 };
+        let capacity: any = { sugar: 0, ethanol: 0, power: 0, feed: 0 };
         
         if (createFormData.capacity) {
           const capacityStr = createFormData.capacity.toString();
@@ -261,8 +261,8 @@ function MasterDataContent() {
           } else if (createFormData.type === 'Co-generation Plant') {
             capacity.power = value; // MW
           } else {
-            // For other types, store as custom capacity
-            capacity = { sugar: 0, ethanol: 0, power: 0, feed: 0, other: capacityStr };
+            // For other types, just use default values
+            // The capacity string is stored in the capacity field on the form
           }
         }
         
