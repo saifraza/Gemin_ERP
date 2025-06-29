@@ -87,6 +87,48 @@ app.get('/health', async (c) => {
   return c.json(health, statusCode);
 });
 
+// System database check endpoint
+app.get('/api/system/database', async (c) => {
+  try {
+    const dbInfo = {
+      status: 'checking',
+      tables: {},
+      stats: {}
+    };
+
+    // Check database connectivity
+    await prisma.$queryRaw`SELECT 1`;
+    dbInfo.status = 'connected';
+
+    // Get table counts
+    const [userCount, companyCount, factoryCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.company.count(),
+      prisma.factory.count()
+    ]);
+
+    dbInfo.tables = {
+      users: userCount,
+      companies: companyCount,
+      factories: factoryCount
+    };
+
+    dbInfo.stats = {
+      databaseUrl: process.env.DATABASE_URL ? 'configured' : 'missing',
+      environment: process.env.NODE_ENV || 'development'
+    };
+
+    return c.json(dbInfo);
+  } catch (error) {
+    log.error('Database system check failed:', error);
+    return c.json({
+      status: 'error',
+      error: error.message,
+      message: 'Database connection failed'
+    }, 500);
+  }
+});
+
 // Mount routes
 app.route('/api/auth', authRoutes);
 app.route('/api/companies', companyRoutes);

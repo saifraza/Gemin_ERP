@@ -27,6 +27,12 @@ const defaultSections: SidebarSection[] = [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
       { id: 'master-data', label: 'Master Data', href: '/master-data' },
     ]
+  },
+  {
+    title: 'System',
+    items: [
+      { id: 'system-test', label: 'System Test', href: '/system-test' },
+    ]
   }
 ];
 

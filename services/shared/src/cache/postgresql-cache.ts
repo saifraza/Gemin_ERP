@@ -38,8 +38,9 @@ export class PostgreSQLCache {
 
     if (!entry) return null;
 
-    const expiresAt = entry.metadata?.expiresAt 
-      ? new Date(entry.metadata.expiresAt as string) 
+    const metadata = entry.metadata as Record<string, any>;
+    const expiresAt = metadata?.expiresAt 
+      ? new Date(metadata.expiresAt as string) 
       : null;
       
     if (expiresAt && expiresAt < new Date()) {
@@ -75,7 +76,7 @@ export class PostgreSQLCache {
       where: { id: entry.id },
       data: {
         metadata: {
-          ...entry.metadata,
+          ...(entry.metadata as Record<string, any> || {}),
           expiresAt: new Date(Date.now() + seconds * 1000).toISOString(),
         },
       },
