@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { prisma, cache } from '../index';
 import { PostgreSQLSessionStore } from '../shared/cache/index';
+import { BadRequestError, UnauthorizedError, NotFoundError } from '../../../packages/shared/src/errors/index';
 
 const authRoutes = new Hono();
 
@@ -61,7 +62,7 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
   });
   
   if (!user || !await bcrypt.compare(password, user.passwordHash)) {
-    return c.json({ error: 'Invalid credentials' }, 401);
+    throw new UnauthorizedError('Invalid credentials');
   }
   
   // Create JWT with access level

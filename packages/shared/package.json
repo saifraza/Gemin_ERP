@@ -1,0 +1,14 @@
+{
+  "name": "@modern-erp/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for Modern ERP",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

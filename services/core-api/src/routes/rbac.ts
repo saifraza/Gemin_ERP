@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index';
 import { jwtVerify } from 'jose';
+import { isPrismaError, PrismaErrorCode } from '../types/errors';
 
 const rbacRoutes = new Hono();
 
@@ -51,9 +52,9 @@ rbacRoutes.get('/roles', async (c) => {
     });
     
     return c.json(roles);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching roles:', error);
-    if (error.code === 'P2021') {
+    if (isPrismaError(error) && error.code === PrismaErrorCode.TableNotFound) {
       return c.json({ 
         error: 'RBAC tables not found. Please run /api/rbac-init/init first.',
         needsInit: true 
@@ -91,8 +92,8 @@ rbacRoutes.post('/roles', zValidator('json', createRoleSchema), async (c) => {
     });
     
     return c.json(role, 201);
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error) {
+    if (isPrismaError(error) && error.code === PrismaErrorCode.UniqueConstraintViolation) {
       return c.json({ error: 'Role name or code already exists' }, 400);
     }
     throw error;
@@ -117,9 +118,9 @@ rbacRoutes.get('/modules', async (c) => {
     });
     
     return c.json(modules);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching modules:', error);
-    if (error.code === 'P2021') {
+    if (isPrismaError(error) && error.code === PrismaErrorCode.TableNotFound) {
       return c.json({ 
         error: 'RBAC tables not found. Please run /api/rbac-init/init first.',
         needsInit: true 

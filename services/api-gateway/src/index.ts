@@ -9,6 +9,14 @@ import pino from 'pino';
 import { jwtVerify } from 'jose';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSQLCache, PostgreSQLRateLimiter } from './shared/cache/index.js';
+import type { 
+  AppContext, 
+  AppMiddleware, 
+  AuthPayload, 
+  ServiceConfig, 
+  HealthCheckResponse, 
+  ServiceHealth 
+} from './types.js';
 
 const log = pino({ name: 'api-gateway' });
 
@@ -36,7 +44,7 @@ async function ensureDbConnection() {
 }
 
 // Service URLs - Use environment variables (configured in Railway)
-const services = {
+const services: ServiceConfig = {
   core: process.env.CORE_API_URL || 'http://localhost:3001',
   mcp: process.env.MCP_ORCHESTRATOR_URL || 'http://localhost:3000',
   factory: process.env.FACTORY_API_URL || 'http://localhost:3002',
@@ -51,8 +59,8 @@ log.info({
   services,
 }, 'API Gateway configuration');
 
-const app = new Hono();
-let server: any; // Will be set when server starts
+const app = new Hono<{ Variables: { user?: AuthPayload } }>();
+let server: ReturnType<typeof serve> | undefined; // Will be set when server starts
 let wss: WebSocketServer;
 
 // Global error handler
@@ -132,7 +140,7 @@ const rateLimiterMiddleware = async (c: any, next: any) => {
 app.use('/api/*', rateLimiterMiddleware);
 
 // Authentication middleware
-const authMiddleware = async (c: any, next: any) => {
+const authMiddleware: AppMiddleware = async (c, next) => {
   // Skip auth for public endpoints
   const publicPaths = ['/api/auth/login', '/api/auth/register', '/health'];
   if (publicPaths.some(path => c.req.path.startsWith(path))) {

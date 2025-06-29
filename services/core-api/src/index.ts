@@ -6,6 +6,7 @@ import { logger } from 'hono/logger';
 import { PrismaClient } from '@prisma/client';
 import pino from 'pino';
 import { PostgreSQLCache } from './shared/cache/index';
+import { errorHandler } from '../../../packages/shared/src/errors/index';
 
 // Routes
 import { authRoutes } from './routes/auth';
@@ -150,13 +151,7 @@ app.route('/api/materials', materials);
 app.route('/api/rbac-init', rbacInitRoutes);
 
 // Error handling
-app.onError((err, c) => {
-  log.error(err);
-  return c.json({ 
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  }, 500);
-});
+app.onError(errorHandler);
 
 // Start server
 const port = parseInt(process.env.PORT || '3001');
