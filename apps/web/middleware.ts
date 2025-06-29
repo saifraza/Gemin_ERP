@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('auth_token')?.value;
   
-  console.log(`Middleware: Processing request for ${pathname}`);
+  console.log(`[MIDDLEWARE] Path: ${pathname}, Has Token: ${!!token}, Token Value: ${token ? 'exists' : 'none'}`);
   
   // List of public routes that don't require authentication
   const publicRoutes = [
@@ -31,12 +32,12 @@ export function middleware(request: NextRequest) {
   
   // Special handling for root path
   if (pathname === '/') {
-    const token = request.cookies.get('auth_token')?.value;
     if (!token) {
-      console.log('Middleware: No auth token for root path, redirecting to login');
+      console.log('[MIDDLEWARE] Root path accessed without auth, redirecting to login');
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
     // If authenticated, redirect to dashboard
+    console.log('[MIDDLEWARE] Root path accessed with auth, redirecting to dashboard');
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
   
@@ -45,14 +46,13 @@ export function middleware(request: NextRequest) {
   }
   
   // For all other routes, strictly check for auth token
-  const token = request.cookies.get('auth_token')?.value;
+  // We already have the token from above
   
   // No token = no access
   if (!token) {
-    console.log(`Middleware: No auth token for ${pathname}, redirecting to login`);
+    console.log(`[MIDDLEWARE] BLOCKING ACCESS: ${pathname} - No auth token, redirecting to login`);
     
     // Store the original URL to redirect back after login
-    const redirectUrl = request.url;
     const loginUrl = new URL('/auth/login', request.url);
     
     // Add the redirect URL as a query parameter
@@ -65,11 +65,27 @@ export function middleware(request: NextRequest) {
     response.cookies.delete('auth-storage');
     response.cookies.delete('auth_token');
     
+    console.log(`[MIDDLEWARE] Redirecting to: ${loginUrl.toString()}`);
     return response;
   }
   
-  // TODO: Optionally verify token validity here
+  // List of protected routes that MUST have authentication
+  const protectedRoutes = [
+    '/dashboard',
+    '/master-data',
+    '/finance',
+    '/company',
+    '/system-test',
+  ];
   
+  // Double-check protected routes
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  if (isProtectedRoute && !token) {
+    console.log(`[MIDDLEWARE] CRITICAL: Protected route ${pathname} accessed without token!`);
+    return NextResponse.redirect(new URL('/auth/login', request.url));
+  }
+  
+  console.log(`[MIDDLEWARE] Allowing access to ${pathname} with token`);
   return NextResponse.next();
 }
 
