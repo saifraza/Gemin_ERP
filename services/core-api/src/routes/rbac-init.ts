@@ -169,23 +169,31 @@ rbacInitRoutes.post('/init', async (c) => {
       );
     `);
 
-    // Create indexes
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "RoleDefinition_name_key" ON "RoleDefinition"("name");
-      CREATE UNIQUE INDEX IF NOT EXISTS "RoleDefinition_code_key" ON "RoleDefinition"("code");
-      CREATE INDEX IF NOT EXISTS "RoleDefinition_level_idx" ON "RoleDefinition"("level");
-      CREATE UNIQUE INDEX IF NOT EXISTS "Module_name_key" ON "Module"("name");
-      CREATE UNIQUE INDEX IF NOT EXISTS "Module_code_key" ON "Module"("code");
-      CREATE UNIQUE INDEX IF NOT EXISTS "SubModule_moduleId_code_key" ON "SubModule"("moduleId", "code");
-      CREATE UNIQUE INDEX IF NOT EXISTS "Permission_code_key" ON "Permission"("code");
-      CREATE INDEX IF NOT EXISTS "Permission_moduleId_action_idx" ON "Permission"("moduleId", "action");
-      CREATE UNIQUE INDEX IF NOT EXISTS "RolePermission_roleId_permissionId_key" ON "RolePermission"("roleId", "permissionId");
-      CREATE INDEX IF NOT EXISTS "UserRole_userId_isActive_idx" ON "UserRole"("userId", "isActive");
-      CREATE UNIQUE INDEX IF NOT EXISTS "UserRole_userId_roleId_scope_scopeId_key" ON "UserRole"("userId", "roleId", "scope", "scopeId");
-      CREATE INDEX IF NOT EXISTS "UserPermission_userId_permissionId_idx" ON "UserPermission"("userId", "permissionId");
-      CREATE INDEX IF NOT EXISTS "ResourceAccess_userId_resourceType_resourceId_idx" ON "ResourceAccess"("userId", "resourceType", "resourceId");
-      CREATE UNIQUE INDEX IF NOT EXISTS "ResourceAccess_userId_resourceType_resourceId_key" ON "ResourceAccess"("userId", "resourceType", "resourceId");
-    `);
+    // Create indexes individually
+    const indexes = [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "RoleDefinition_name_key" ON "RoleDefinition"("name")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "RoleDefinition_code_key" ON "RoleDefinition"("code")`,
+      `CREATE INDEX IF NOT EXISTS "RoleDefinition_level_idx" ON "RoleDefinition"("level")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Module_name_key" ON "Module"("name")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Module_code_key" ON "Module"("code")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "SubModule_moduleId_code_key" ON "SubModule"("moduleId", "code")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "Permission_code_key" ON "Permission"("code")`,
+      `CREATE INDEX IF NOT EXISTS "Permission_moduleId_action_idx" ON "Permission"("moduleId", "action")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "RolePermission_roleId_permissionId_key" ON "RolePermission"("roleId", "permissionId")`,
+      `CREATE INDEX IF NOT EXISTS "UserRole_userId_isActive_idx" ON "UserRole"("userId", "isActive")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "UserRole_userId_roleId_scope_scopeId_key" ON "UserRole"("userId", "roleId", "scope", "scopeId")`,
+      `CREATE INDEX IF NOT EXISTS "UserPermission_userId_permissionId_idx" ON "UserPermission"("userId", "permissionId")`,
+      `CREATE INDEX IF NOT EXISTS "ResourceAccess_userId_resourceType_resourceId_idx" ON "ResourceAccess"("userId", "resourceType", "resourceId")`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS "ResourceAccess_userId_resourceType_resourceId_key" ON "ResourceAccess"("userId", "resourceType", "resourceId")`
+    ];
+
+    for (const index of indexes) {
+      try {
+        await prisma.$executeRawUnsafe(index);
+      } catch (e) {
+        console.log(`Index creation skipped: ${e.message}`);
+      }
+    }
 
     // Add foreign key constraints if tables exist
     try {
