@@ -84,6 +84,10 @@ TabButton.displayName = 'TabButton';
 
 // Business types
 const businessTypes = [
+  'Sugar Manufacturing',
+  'Integrated Sugar Complex',
+  'Distillery',
+  'Co-generation Plant',
   'Manufacturing',
   'Retail',
   'Services',
@@ -204,13 +208,74 @@ function MasterDataContent() {
   const handleCreate = async () => {
     try {
       if (activeTab === 'companies') {
+        // Validate required fields
+        if (!createFormData.name || !createFormData.code) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
         await createCompany.mutateAsync(createFormData);
       } else if (activeTab === 'users') {
+        // Validate required fields
+        if (!createFormData.name || !createFormData.username || !createFormData.email || !createFormData.password) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
         await createUser.mutateAsync(createFormData);
       } else if (activeTab === 'factories') {
-        // Generate business code
-        const code = `BU${Date.now().toString(36).toUpperCase()}`;
-        await createFactory.mutateAsync({ ...createFormData, code });
+        // Ensure required fields are provided
+        if (!createFormData.name || !createFormData.code || !createFormData.type || !createFormData.companyId) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
+        
+        // Map business type to factory type
+        let factoryType = 'INTEGRATED';
+        switch (createFormData.type) {
+          case 'Sugar Manufacturing':
+            factoryType = 'SUGAR_ONLY';
+            break;
+          case 'Integrated Sugar Complex':
+            factoryType = 'INTEGRATED';
+            break;
+          case 'Distillery':
+            factoryType = 'DISTILLERY';
+            break;
+          case 'Co-generation Plant':
+            factoryType = 'COGEN';
+            break;
+          default:
+            factoryType = 'INTEGRATED';
+        }
+        
+        // Prepare capacity based on type
+        let capacity = { sugar: 0, ethanol: 0, power: 0, feed: 0 };
+        
+        if (createFormData.capacity) {
+          const capacityStr = createFormData.capacity.toString();
+          const value = parseInt(capacityStr.replace(/[^0-9]/g, ''), 10) || 0;
+          
+          if (createFormData.type === 'Sugar Manufacturing' || createFormData.type === 'Integrated Sugar Complex') {
+            capacity.sugar = value; // TCD
+          } else if (createFormData.type === 'Distillery') {
+            capacity.ethanol = value; // KLPD
+          } else if (createFormData.type === 'Co-generation Plant') {
+            capacity.power = value; // MW
+          } else {
+            // For other types, store as custom capacity
+            capacity = { sugar: 0, ethanol: 0, power: 0, feed: 0, other: capacityStr };
+          }
+        }
+        
+        const factoryData = {
+          name: createFormData.name,
+          code: createFormData.code,
+          type: factoryType,
+          companyId: createFormData.companyId,
+          location: createFormData.location || {},
+          capacity: capacity
+        };
+        
+        await createFactory.mutateAsync(factoryData);
       }
       setShowCreateModal(false);
       setCreateFormData({
@@ -225,9 +290,46 @@ function MasterDataContent() {
     }
   };
   
-  // Auto-generate business code
-  const generateBusinessCode = () => {
-    return `BU${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  // Generate sequential codes for master data
+  const generateCode = async (type: 'company' | 'user' | 'business') => {
+    try {
+      let prefix = '';
+      let data: any[] = [];
+      
+      switch (type) {
+        case 'company':
+          prefix = 'COMP';
+          data = companies;
+          break;
+        case 'user':
+          prefix = 'USR';
+          data = users;
+          break;
+        case 'business':
+          prefix = 'BU';
+          data = factories;
+          break;
+      }
+      
+      // Find the highest number in existing codes
+      let maxNumber = 0;
+      data.forEach((item: any) => {
+        if (item.code && item.code.startsWith(prefix)) {
+          const numPart = item.code.replace(prefix, '').replace(/\D/g, '');
+          const num = parseInt(numPart, 10);
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      });
+      
+      // Generate new code with padded number
+      const newNumber = maxNumber + 1;
+      return `${prefix}${String(newNumber).padStart(4, '0')}`;
+    } catch (error) {
+      // Fallback to timestamp-based code if there's an error
+      return `${type.toUpperCase()}${Date.now().toString(36).toUpperCase()}`;
+    }
   };
 
   // Export functionality
@@ -583,12 +685,24 @@ function MasterDataContent() {
                     </div>
                     <div>
                       <Label htmlFor="code">Company Code</Label>
-                      <Input
-                        id="code"
-                        value={createFormData.code || ''}
-                        onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
-                        placeholder="Enter company code"
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="code"
+                          value={createFormData.code || ''}
+                          onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
+                          placeholder="Enter code or generate"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={async () => {
+                            const newCode = await generateCode('company');
+                            setCreateFormData({ ...createFormData, code: newCode });
+                          }}
+                        >
+                          Generate
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -741,15 +855,17 @@ function MasterDataContent() {
                       <div className="flex gap-2">
                         <Input
                           id="code"
-                          value={createFormData.code || generateBusinessCode()}
+                          value={createFormData.code || ''}
                           onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value })}
-                          placeholder="Auto-generated"
-                          readOnly
+                          placeholder="Enter code or generate"
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setCreateFormData({ ...createFormData, code: generateBusinessCode() })}
+                          onClick={async () => {
+                            const newCode = await generateCode('business');
+                            setCreateFormData({ ...createFormData, code: newCode });
+                          }}
                         >
                           Generate
                         </Button>
@@ -864,15 +980,51 @@ function MasterDataContent() {
                   </div>
                   
                   {/* Dynamic fields based on business type */}
-                  {createFormData.type === 'Manufacturing' && (
+                  {(createFormData.type === 'Sugar Manufacturing' || createFormData.type === 'Integrated Sugar Complex') && (
                     <div>
-                      <Label htmlFor="capacity">Production Capacity (units/month)</Label>
+                      <Label htmlFor="capacity">Sugar Crushing Capacity</Label>
                       <Input
                         id="capacity"
-                        type="number"
+                        type="text"
                         value={createFormData.capacity || ''}
                         onChange={(e) => setCreateFormData({ ...createFormData, capacity: e.target.value })}
-                        placeholder="Enter production capacity"
+                        placeholder="e.g., 8000 TCD"
+                      />
+                    </div>
+                  )}
+                  {createFormData.type === 'Distillery' && (
+                    <div>
+                      <Label htmlFor="capacity">Ethanol Production Capacity</Label>
+                      <Input
+                        id="capacity"
+                        type="text"
+                        value={createFormData.capacity || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, capacity: e.target.value })}
+                        placeholder="e.g., 100 KLPD"
+                      />
+                    </div>
+                  )}
+                  {createFormData.type === 'Co-generation Plant' && (
+                    <div>
+                      <Label htmlFor="capacity">Power Generation Capacity</Label>
+                      <Input
+                        id="capacity"
+                        type="text"
+                        value={createFormData.capacity || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, capacity: e.target.value })}
+                        placeholder="e.g., 30 MW"
+                      />
+                    </div>
+                  )}
+                  {createFormData.type === 'Manufacturing' && (
+                    <div>
+                      <Label htmlFor="capacity">Production Capacity</Label>
+                      <Input
+                        id="capacity"
+                        type="text"
+                        value={createFormData.capacity || ''}
+                        onChange={(e) => setCreateFormData({ ...createFormData, capacity: e.target.value })}
+                        placeholder="e.g., 5000 units/month"
                       />
                     </div>
                   )}
