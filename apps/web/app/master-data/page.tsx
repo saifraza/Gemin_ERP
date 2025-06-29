@@ -1787,10 +1787,10 @@ function MasterDataContent() {
                               </td>
                               <td className="px-2 py-1">
                                 <Select
-                                  value={row.companyId || ''}
+                                  value={row.companyId || 'placeholder'}
                                   onValueChange={(value) => {
                                     const newData = [...bulkData];
-                                    newData[index] = { ...newData[index], companyId: value };
+                                    newData[index] = { ...newData[index], companyId: value === 'placeholder' ? undefined : value };
                                     setBulkData(newData);
                                   }}
                                 >
@@ -1798,6 +1798,9 @@ function MasterDataContent() {
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                   <SelectContent>
+                                    <SelectItem value="placeholder" disabled>
+                                      Select Company
+                                    </SelectItem>
                                     {companies.map((company: any) => (
                                       <SelectItem key={company.id} value={company.id}>
                                         {company.name}
@@ -1890,10 +1893,10 @@ function MasterDataContent() {
                               </td>
                               <td className="px-2 py-1">
                                 <Select
-                                  value={row.companyId || ''}
+                                  value={row.companyId || 'placeholder'}
                                   onValueChange={(value) => {
                                     const newData = [...bulkData];
-                                    newData[index] = { ...newData[index], companyId: value };
+                                    newData[index] = { ...newData[index], companyId: value === 'placeholder' ? undefined : value };
                                     setBulkData(newData);
                                   }}
                                 >
@@ -1901,6 +1904,9 @@ function MasterDataContent() {
                                     <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                   <SelectContent>
+                                    <SelectItem value="placeholder" disabled>
+                                      Select Company
+                                    </SelectItem>
                                     {companies.map((company: any) => (
                                       <SelectItem key={company.id} value={company.id}>
                                         {company.name}
