@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth';
 import { requireModulePermission, requireCompanyAccess } from '../../middleware/rbac';
 import { prisma } from '../../index';
-import * as PrismaClient from '@prisma/client';
-const QuotationStatus = PrismaClient.QuotationStatus;
+const { QuotationStatus } = require('@prisma/client');
 
 const quotations = new Hono();
 
