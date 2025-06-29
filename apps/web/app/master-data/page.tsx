@@ -10,6 +10,46 @@ import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+// Indian states
+const indianStates = [
+  { value: 'AN', label: 'Andaman and Nicobar Islands' },
+  { value: 'AP', label: 'Andhra Pradesh' },
+  { value: 'AR', label: 'Arunachal Pradesh' },
+  { value: 'AS', label: 'Assam' },
+  { value: 'BR', label: 'Bihar' },
+  { value: 'CH', label: 'Chandigarh' },
+  { value: 'CT', label: 'Chhattisgarh' },
+  { value: 'DN', label: 'Dadra and Nagar Haveli and Daman and Diu' },
+  { value: 'DL', label: 'Delhi' },
+  { value: 'GA', label: 'Goa' },
+  { value: 'GJ', label: 'Gujarat' },
+  { value: 'HR', label: 'Haryana' },
+  { value: 'HP', label: 'Himachal Pradesh' },
+  { value: 'JK', label: 'Jammu and Kashmir' },
+  { value: 'JH', label: 'Jharkhand' },
+  { value: 'KA', label: 'Karnataka' },
+  { value: 'KL', label: 'Kerala' },
+  { value: 'LA', label: 'Ladakh' },
+  { value: 'LD', label: 'Lakshadweep' },
+  { value: 'MP', label: 'Madhya Pradesh' },
+  { value: 'MH', label: 'Maharashtra' },
+  { value: 'MN', label: 'Manipur' },
+  { value: 'ML', label: 'Meghalaya' },
+  { value: 'MZ', label: 'Mizoram' },
+  { value: 'NL', label: 'Nagaland' },
+  { value: 'OR', label: 'Odisha' },
+  { value: 'PY', label: 'Puducherry' },
+  { value: 'PB', label: 'Punjab' },
+  { value: 'RJ', label: 'Rajasthan' },
+  { value: 'SK', label: 'Sikkim' },
+  { value: 'TN', label: 'Tamil Nadu' },
+  { value: 'TG', label: 'Telangana' },
+  { value: 'TR', label: 'Tripura' },
+  { value: 'UP', label: 'Uttar Pradesh' },
+  { value: 'UT', label: 'Uttarakhand' },
+  { value: 'WB', label: 'West Bengal' }
+];
+
 // Business types with their specific fields
 const businessTypes = [
   { value: 'MANUFACTURING', label: 'Manufacturing', hasCapacity: true },
@@ -987,13 +1027,16 @@ function MasterDataContent() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">State *</label>
-                    <input
-                      type="text"
+                    <select
                       value={addFormData.factoryState}
                       onChange={(e) => setAddFormData({...addFormData, factoryState: e.target.value})}
                       className="w-full px-3 py-2 border rounded-md"
-                      placeholder="State"
-                    />
+                    >
+                      <option value="">Select State</option>
+                      {indianStates.map(state => (
+                        <option key={state.value} value={state.value}>{state.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-center justify-between mb-1">
@@ -1137,7 +1180,7 @@ function MasterDataContent() {
                       <p className="text-sm text-gray-600">Code: {factory.code}</p>
                       <p className="text-sm text-gray-600">Type: {businessTypes.find(t => t.value === factory.type)?.label || factory.type}</p>
                       <p className="text-sm text-gray-600">
-                        Location: {factory.location?.city}, {factory.location?.state}
+                        Location: {factory.location?.city}, {indianStates.find(s => s.value === factory.location?.state)?.label || factory.location?.state}
                       </p>
                       {factory.capacity && (
                         <div className="mt-2 text-sm text-gray-600">
