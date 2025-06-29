@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { factoryAccessMiddleware, getFactoryContext } from '../middleware/factory-access.js';
-import { requireRead, requireCreate, requireUpdate, requireDelete } from '../middleware/rbac.js';
+import { requireModulePermission } from '../middleware/rbac.js';
 
 const companyRoutes = new Hono();
 
@@ -21,7 +21,7 @@ const paginationSchema = z.object({
 });
 
 // Get all companies with pagination, search, and sorting
-companyRoutes.get('/', requireRead(), zValidator('query', paginationSchema), async (c) => {
+companyRoutes.get('/', requireModulePermission('COMPANIES', 'READ'), zValidator('query', paginationSchema), async (c) => {
   const { page, limit, search, sortBy, sortOrder } = c.req.valid('query');
   const context = getFactoryContext(c);
   const userPermissions = c.get('userPermissions');
@@ -115,7 +115,7 @@ companyRoutes.get('/', requireRead(), zValidator('query', paginationSchema), asy
 });
 
 // Get company by ID (optimized with select)
-companyRoutes.get('/:id', requireRead('COMPANY', 'id'), async (c) => {
+companyRoutes.get('/:id', requireModulePermission('COMPANIES', 'READ', 'COMPANY', 'id'), async (c) => {
   const id = c.req.param('id');
   const context = getFactoryContext(c);
   
@@ -156,7 +156,7 @@ const createCompanySchema = z.object({
 });
 
 // Create company
-companyRoutes.post('/', requireCreate('COMPANY'), zValidator('json', createCompanySchema), async (c) => {
+companyRoutes.post('/', requireModulePermission('COMPANIES', 'CREATE', 'COMPANY'), zValidator('json', createCompanySchema), async (c) => {
   const data = c.req.valid('json');
   const context = getFactoryContext(c);
   
@@ -188,7 +188,7 @@ companyRoutes.post('/', requireCreate('COMPANY'), zValidator('json', createCompa
 });
 
 // Update company
-companyRoutes.put('/:id', requireUpdate('COMPANY', 'id'), zValidator('json', createCompanySchema.partial()), async (c) => {
+companyRoutes.put('/:id', requireModulePermission('COMPANIES', 'UPDATE', 'COMPANY', 'id'), zValidator('json', createCompanySchema.partial()), async (c) => {
   const id = c.req.param('id');
   const data = c.req.valid('json');
   const context = getFactoryContext(c);
@@ -222,7 +222,7 @@ companyRoutes.put('/:id', requireUpdate('COMPANY', 'id'), zValidator('json', cre
 });
 
 // Delete company
-companyRoutes.delete('/:id', requireDelete('COMPANY', 'id'), async (c) => {
+companyRoutes.delete('/:id', requireModulePermission('COMPANIES', 'DELETE', 'COMPANY', 'id'), async (c) => {
   const id = c.req.param('id');
   const context = getFactoryContext(c);
   

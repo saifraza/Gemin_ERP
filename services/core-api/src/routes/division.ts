@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { prisma } from '../index.js';
 import { jwtVerify } from 'jose';
+import { requireModulePermission } from '../middleware/rbac.js';
 
 const divisionRoutes = new Hono();
 
@@ -33,7 +34,7 @@ divisionRoutes.use('*', async (c, next) => {
 });
 
 // Get all divisions
-divisionRoutes.get('/', async (c) => {
+divisionRoutes.get('/', requireModulePermission('DIVISIONS', 'READ'), async (c) => {
   const factoryId = c.req.query('factoryId');
   
   const whereClause = factoryId ? { factoryId } : {};
@@ -64,7 +65,7 @@ const createDivisionSchema = z.object({
 });
 
 // Get division by ID
-divisionRoutes.get('/:id', async (c) => {
+divisionRoutes.get('/:id', requireModulePermission('DIVISIONS', 'READ', 'DIVISION', 'id'), async (c) => {
   const id = c.req.param('id');
   
   const division = await prisma.division.findUnique({
@@ -84,7 +85,7 @@ divisionRoutes.get('/:id', async (c) => {
 });
 
 // Create division
-divisionRoutes.post('/', zValidator('json', createDivisionSchema), async (c) => {
+divisionRoutes.post('/', requireModulePermission('DIVISIONS', 'CREATE'), zValidator('json', createDivisionSchema), async (c) => {
   const data = c.req.valid('json');
   
   try {
@@ -108,7 +109,7 @@ divisionRoutes.post('/', zValidator('json', createDivisionSchema), async (c) => 
 });
 
 // Update division
-divisionRoutes.put('/:id', zValidator('json', createDivisionSchema.partial()), async (c) => {
+divisionRoutes.put('/:id', requireModulePermission('DIVISIONS', 'UPDATE', 'DIVISION', 'id'), zValidator('json', createDivisionSchema.partial()), async (c) => {
   const id = c.req.param('id');
   const data = c.req.valid('json');
   
@@ -131,7 +132,7 @@ divisionRoutes.put('/:id', zValidator('json', createDivisionSchema.partial()), a
 });
 
 // Delete division
-divisionRoutes.delete('/:id', async (c) => {
+divisionRoutes.delete('/:id', requireModulePermission('DIVISIONS', 'DELETE', 'DIVISION', 'id'), async (c) => {
   const id = c.req.param('id');
   
   try {
