@@ -892,7 +892,7 @@ function MasterDataContent() {
                   resetAddForm();
                   // Set default company if there's only one or use the first one
                   if (companies.length === 1) {
-                    setAddFormData(prev => ({
+                    setAddFormData((prev: any) => ({
                       ...prev,
                       factoryCompanyId: companies[0].id
                     }));
