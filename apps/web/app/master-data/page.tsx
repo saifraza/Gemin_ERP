@@ -109,7 +109,13 @@ function MasterDataContent() {
 
   // Copy company address to business
   const copyCompanyAddress = () => {
+    console.log('Copy button clicked');
+    console.log('Selected company ID:', addFormData.factoryCompanyId);
+    console.log('Companies:', companies);
+    
     const selectedCompany = companies.find(c => c.id === addFormData.factoryCompanyId);
+    console.log('Found company:', selectedCompany);
+    
     if (selectedCompany && selectedCompany.address) {
       // Simply copy the full address
       // City and State should be filled manually as they might not be parseable from address
@@ -118,6 +124,8 @@ function MasterDataContent() {
         factoryAddress: selectedCompany.address,
       });
       toast.success('Company address copied! Please fill in City and State.');
+    } else if (selectedCompany && !selectedCompany.address) {
+      toast.error('Selected company has no address');
     } else {
       toast.error('Please select a company first');
     }
@@ -882,6 +890,13 @@ function MasterDataContent() {
                 onClick={() => {
                   setShowAddForm(true);
                   resetAddForm();
+                  // Set default company if there's only one or use the first one
+                  if (companies.length === 1) {
+                    setAddFormData(prev => ({
+                      ...prev,
+                      factoryCompanyId: companies[0].id
+                    }));
+                  }
                 }}
                 className="gap-2"
               >
