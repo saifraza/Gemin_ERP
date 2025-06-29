@@ -325,173 +325,114 @@ rbacInitRoutes.post('/seed', async (c) => {
   try {
     console.log('Starting RBAC seed...');
 
-    // Create basic roles
-    const roles = await prisma.$transaction(async (tx) => {
-      const superAdmin = await tx.roleDefinition.upsert({
-        where: { code: 'SUPER_ADMIN' },
-        update: {},
-        create: {
-          name: 'Super Admin',
-          code: 'SUPER_ADMIN',
-          description: 'Full system access',
-          level: 100,
-          isSystem: true
-        }
-      });
-
-      const admin = await tx.roleDefinition.upsert({
-        where: { code: 'ADMIN' },
-        update: {},
-        create: {
-          name: 'Admin',
-          code: 'ADMIN',
-          description: 'Administrative access',
-          level: 90,
-          isSystem: true
-        }
-      });
-
-      const manager = await tx.roleDefinition.upsert({
-        where: { code: 'MANAGER' },
-        update: {},
-        create: {
-          name: 'Manager',
-          code: 'MANAGER',
-          description: 'Manager level access',
-          level: 70,
-          isSystem: true
-        }
-      });
-
-      const user = await tx.roleDefinition.upsert({
-        where: { code: 'USER' },
-        update: {},
-        create: {
-          name: 'User',
-          code: 'USER',
-          description: 'Basic user access',
-          level: 30,
-          isSystem: true
-        }
-      });
-
-      return { superAdmin, admin, manager, user };
-    });
+    // Create basic roles using raw SQL
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "RoleDefinition" (id, name, code, description, level, "isSystem", "createdAt", "updatedAt")
+      VALUES 
+        ('cuid_super_admin', 'Super Admin', 'SUPER_ADMIN', 'Full system access', 100, true, NOW(), NOW()),
+        ('cuid_admin', 'Admin', 'ADMIN', 'Administrative access', 90, true, NOW(), NOW()),
+        ('cuid_manager', 'Manager', 'MANAGER', 'Manager level access', 70, true, NOW(), NOW()),
+        ('cuid_user', 'User', 'USER', 'Basic user access', 30, true, NOW(), NOW())
+      ON CONFLICT (code) DO NOTHING;
+    `);
 
     // Create basic modules
-    const modules = await prisma.$transaction(async (tx) => {
-      const masterData = await tx.module.upsert({
-        where: { code: 'MASTER_DATA' },
-        update: {},
-        create: {
-          name: 'Master Data',
-          code: 'MASTER_DATA',
-          description: 'Master data management',
-          icon: 'Database',
-          path: '/master-data'
-        }
-      });
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Module" (id, name, code, description, icon, path, "isActive", "createdAt", "updatedAt")
+      VALUES 
+        ('cuid_master_data', 'Master Data', 'MASTER_DATA', 'Master data management', 'Database', '/master-data', true, NOW(), NOW()),
+        ('cuid_supply_chain', 'Supply Chain', 'SUPPLY_CHAIN', 'Supply chain management', 'Package', '/supply-chain', true, NOW(), NOW()),
+        ('cuid_finance', 'Finance', 'FINANCE', 'Financial management', 'DollarSign', '/finance', true, NOW(), NOW())
+      ON CONFLICT (code) DO NOTHING;
+    `);
 
-      const supplyChain = await tx.module.upsert({
-        where: { code: 'SUPPLY_CHAIN' },
-        update: {},
-        create: {
-          name: 'Supply Chain',
-          code: 'SUPPLY_CHAIN',
-          description: 'Supply chain management',
-          icon: 'Package',
-          path: '/supply-chain'
-        }
-      });
+    // Create permissions
+    const permissionActions = ['CREATE', 'READ', 'UPDATE', 'DELETE'];
+    const modules = [
+      { id: 'cuid_master_data', code: 'MASTER_DATA', name: 'Master Data' },
+      { id: 'cuid_supply_chain', code: 'SUPPLY_CHAIN', name: 'Supply Chain' },
+      { id: 'cuid_finance', code: 'FINANCE', name: 'Finance' }
+    ];
 
-      const finance = await tx.module.upsert({
-        where: { code: 'FINANCE' },
-        update: {},
-        create: {
-          name: 'Finance',
-          code: 'FINANCE',
-          description: 'Financial management',
-          icon: 'DollarSign',
-          path: '/finance'
-        }
-      });
-
-      return { masterData, supplyChain, finance };
-    });
-
-    // Create permissions for Master Data
-    const permissions = await prisma.$transaction(async (tx) => {
-      const perms = [];
-
-      // Master Data permissions
-      for (const action of ['CREATE', 'READ', 'UPDATE', 'DELETE']) {
-        const perm = await tx.permission.upsert({
-          where: { code: `MASTER_DATA_COMPANY_${action}` },
-          update: {},
-          create: {
-            moduleId: modules.masterData.id,
-            name: `${action} Companies`,
-            code: `MASTER_DATA_COMPANY_${action}`,
-            action: action as any,
-            description: `Can ${action.toLowerCase()} company records`
-          }
-        });
-        perms.push(perm);
+    for (const module of modules) {
+      for (const action of permissionActions) {
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "Permission" (id, "moduleId", name, code, action, description, "createdAt", "updatedAt")
+          VALUES (
+            '${module.id}_perm_${action.toLowerCase()}',
+            '${module.id}',
+            '${action} ${module.name}',
+            '${module.code}_${action}',
+            '${action}',
+            'Can ${action.toLowerCase()} ${module.name.toLowerCase()} records',
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (code) DO NOTHING;
+        `);
       }
+    }
 
-      // Supply Chain permissions
-      for (const action of ['CREATE', 'READ', 'UPDATE', 'DELETE', 'APPROVE']) {
-        const perm = await tx.permission.upsert({
-          where: { code: `SUPPLY_CHAIN_PROCUREMENT_${action}` },
-          update: {},
-          create: {
-            moduleId: modules.supplyChain.id,
-            name: `${action} Procurement`,
-            code: `SUPPLY_CHAIN_PROCUREMENT_${action}`,
-            action: action as any,
-            description: `Can ${action.toLowerCase()} procurement records`
-          }
-        });
-        perms.push(perm);
-      }
-
-      return perms;
-    });
+    // Add APPROVE permission for Supply Chain
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "Permission" (id, "moduleId", name, code, action, description, "createdAt", "updatedAt")
+      VALUES (
+        'cuid_supply_chain_perm_approve',
+        'cuid_supply_chain',
+        'APPROVE Supply Chain',
+        'SUPPLY_CHAIN_APPROVE',
+        'APPROVE',
+        'Can approve supply chain records',
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (code) DO NOTHING;
+    `);
 
     // Assign all permissions to Super Admin
-    await prisma.rolePermission.deleteMany({
-      where: { roleId: roles.superAdmin.id }
-    });
-
-    await prisma.rolePermission.createMany({
-      data: permissions.map(perm => ({
-        roleId: roles.superAdmin.id,
-        permissionId: perm.id,
-        granted: true
-      }))
-    });
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "RolePermission" (id, "roleId", "permissionId", granted, "createdAt")
+      SELECT 
+        CONCAT('rp_', p.id),
+        'cuid_super_admin',
+        p.id,
+        true,
+        NOW()
+      FROM "Permission" p
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "RolePermission" rp 
+        WHERE rp."roleId" = 'cuid_super_admin' AND rp."permissionId" = p.id
+      );
+    `);
 
     // Assign read permissions to User role
-    const readPermissions = permissions.filter(p => p.action === 'READ');
-    await prisma.rolePermission.deleteMany({
-      where: { roleId: roles.user.id }
-    });
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "RolePermission" (id, "roleId", "permissionId", granted, "createdAt")
+      SELECT 
+        CONCAT('rp_user_', p.id),
+        'cuid_user',
+        p.id,
+        true,
+        NOW()
+      FROM "Permission" p
+      WHERE p.action = 'READ'
+      AND NOT EXISTS (
+        SELECT 1 FROM "RolePermission" rp 
+        WHERE rp."roleId" = 'cuid_user' AND rp."permissionId" = p.id
+      );
+    `);
 
-    await prisma.rolePermission.createMany({
-      data: readPermissions.map(perm => ({
-        roleId: roles.user.id,
-        permissionId: perm.id,
-        granted: true
-      }))
-    });
+    const roleCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "RoleDefinition"`;
+    const moduleCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "Module"`;
+    const permissionCount = await prisma.$queryRaw`SELECT COUNT(*) as count FROM "Permission"`;
 
     console.log('RBAC seed completed successfully');
 
     return c.json({ 
       message: 'RBAC data seeded successfully',
-      roles: Object.keys(roles).length,
-      modules: Object.keys(modules).length,
-      permissions: permissions.length
+      roles: roleCount[0]?.count || 0,
+      modules: moduleCount[0]?.count || 0,
+      permissions: permissionCount[0]?.count || 0
     });
   } catch (error) {
     console.error('RBAC seed error:', error);
@@ -506,17 +447,17 @@ rbacInitRoutes.post('/seed', async (c) => {
 rbacInitRoutes.get('/status', async (c) => {
   try {
     const [roleCount, moduleCount, permissionCount] = await Promise.all([
-      prisma.roleDefinition.count().catch(() => 0),
-      prisma.module.count().catch(() => 0),
-      prisma.permission.count().catch(() => 0)
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM "RoleDefinition"`.catch(() => [{ count: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM "Module"`.catch(() => [{ count: 0 }]),
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM "Permission"`.catch(() => [{ count: 0 }])
     ]);
 
     return c.json({
       status: 'ok',
       tables: {
-        roles: roleCount,
-        modules: moduleCount,
-        permissions: permissionCount
+        roles: Number(roleCount[0]?.count) || 0,
+        modules: Number(moduleCount[0]?.count) || 0,
+        permissions: Number(permissionCount[0]?.count) || 0
       }
     });
   } catch (error) {
