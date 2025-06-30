@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install"
+    "buildCommand": "cd /app && pnpm install && pnpm run build --workspace=@modern-erp/api-gateway"
   },
   "deploy": {
     "startCommand": "npm run start:express",
